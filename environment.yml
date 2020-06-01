@@ -1,0 +1,16 @@
+name: your_env_name
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - six
+  - matplotlib
+  - astropy
+  - pandas
+  - jupyter
+  - jupyter-lab
+  - scipy
+  - scikit-learn
+  - scikit-image
+  - numexpr
