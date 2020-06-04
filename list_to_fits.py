@@ -3,7 +3,11 @@ import galsim
 from astropy.io import fits
 from astropy.table import Table
 
+# path to the file to modify
+Path = "datas/TU_cat_field_0.list"
 
+
+#~~~~~~~~~~~~~~~~~~~~
 
 def get_shape(cat): # to get the shape of the catalog
     lines = 0
@@ -26,6 +30,7 @@ def get_shape(cat): # to get the shape of the catalog
 
     return lines, cols
 
+
 def extract_full(path): # extract the catalog
 
     cat = galsim.Catalog(path)
@@ -40,6 +45,7 @@ def extract_full(path): # extract the catalog
             table[i,j] = cat.get(i,j)
             print("[ {} / {} ] :".format(i,N), np.round(100*i/N,1),'%', end='\r')
     return table
+
 
 def to_fits_file_full(table, *arg): # transform list file to fits file
     # arg : 'TU' for True Universe catalog
@@ -74,7 +80,7 @@ def to_fits_file_full(table, *arg): # transform list file to fits file
     print('saved')
 
 
-Path = "datas/TU_cat_field_0.list"
+#~~~~~~~~~~~~~~~~~~~~
 
 cat_full = extract_full(Path)
 
