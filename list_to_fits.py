@@ -61,7 +61,7 @@ def to_fits_file_full(table, *arg): # transform list file to fits file
         header = []
         for i in range(table.shape[1]):
             header.append(str(input('Colum {} name '.format(i))))
-            
+
     else:
         header=[ 'col{}'.format(i) for i in range(table.shape[1]) ]
 
@@ -74,8 +74,8 @@ def to_fits_file_full(table, *arg): # transform list file to fits file
     print('saved')
 
 
-path_TU = "datas/TU_cat_field_0.list"
+Path = "datas/TU_cat_field_0.list"
 
-cat_full = extract_full(path_TU)
+cat_full = extract_full(Path)
 
-to_fits_file_full(cat_full, 'TU')
+to_fits_file_full(cat_full)
