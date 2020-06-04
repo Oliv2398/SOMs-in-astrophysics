@@ -9,6 +9,53 @@ Path = "datas/TU_cat_field_0.list"
 
 #~~~~~~~~~~~~~~~~~~~~
 
+# using np.loadtxt to extract catalog
+
+def to_fits_file_full2(path, *arg): # transform list file to fits file
+    # arg : 'TU' for True Universe catalog
+    #       'choice' to full every column by hand
+    #       'auto' filling with [col0,col1,...]
+
+    table = np.loadtxt(path)
+    print('Catalog loaded')
+    print('Shape :', table.shape)
+
+    if arg==('TU',): # TU catalog column's name ()
+        # 0 : ligne
+        header = ['col0','x','y',
+            'mag', #3
+            'bt', #4
+            'radiusBulge', #5
+            'ell_B', #6
+            'PA', #7
+            'radiusDisk', #8
+            'ell_D', #9
+            'col10', 'col11']
+
+    elif arg==('choice',): # full every column's name
+        header = []
+        for i in range(table.shape[1]):
+            header.append(str(input('Colum {} name '.format(i))))
+
+    else:
+        header=[ 'col{}'.format(i) for i in range(table.shape[1]) ]
+
+    print('\nHeaders :', len(header))
+    print(header)
+
+
+    t = Table(list(table.T),
+        names=header)
+    t.write('TU_created_full.fits', format='fits') # creating the fits file
+    print('\nSaved to .fits file')
+
+to_fits_file_full2(Path)
+
+
+#~~~~~~~~~~~~~~~~~~~~
+
+# using galsim to extract catalog (much more slower)
+
 def get_shape(cat): # to get the shape of the catalog
     lines = 0
     while True:
@@ -44,7 +91,7 @@ def extract_full(path): # extract the catalog
         for j in range(M):
             table[i,j] = cat.get(i,j)
             print("[ {} / {} ] :".format(i,N), np.round(100*i/N,1),'%', end='\r')
-    return table
+    return cat
 
 
 def to_fits_file_full(table, *arg): # transform list file to fits file
@@ -53,7 +100,8 @@ def to_fits_file_full(table, *arg): # transform list file to fits file
     #       'auto' filling with [col0,col1,...]
 
     if arg==('TU',): # TU catalog column's name ()
-        header = ['col0','col1','col2',
+        # 0 : ligne
+        header = ['col0','x','y',
             'mag', #3
             'bt', #4
             'radiusBulge', #5
@@ -74,14 +122,13 @@ def to_fits_file_full(table, *arg): # transform list file to fits file
     print('\n\nHeaders :', len(header))
     print(header)
 
+    """
     t = Table(list(table.T),
         names=header)
     t.write('TU_created_full.fits', format='fits') # creating the fits file
-    print('saved')
+    print('saved')"""
 
 
-#~~~~~~~~~~~~~~~~~~~~
+#cat_full = extract_full(Path)
 
-cat_full = extract_full(Path)
-
-to_fits_file_full(cat_full)
+#to_fits_file_full(cat_full, 'TU')
