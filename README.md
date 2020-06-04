@@ -9,3 +9,6 @@ Utilisation du package [minisom](https://github.com/JustGlowing/minisom) avec un
 
 
 Etude des catalogues True Universe et COSMOS
+
+
+![COSMOS catalog](datas/gx_evo_COSMOS.png)
