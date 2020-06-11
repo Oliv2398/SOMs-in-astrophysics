@@ -5,7 +5,7 @@
 
 Premiere approche avec les SOMs
 
-Utilisation du package [minisom](https://github.com/JustGlowing/minisom) avec un dataset de 15 couleur
+Utilisation du package [minisom](https://github.com/JustGlowing/minisom) 
 
 
 Etude des catalogues True Universe et COSMOS
