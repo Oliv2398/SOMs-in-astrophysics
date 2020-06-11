@@ -91,10 +91,6 @@ if example1:
         plt.imshow(mapped)
         plt.show()
 
-    if False: # Sompy SOMFactory, doesn't work
-        som = SOMFactory.build(data, mapsize=(som_x, som_y), initialization='random')
-        som.train(n_job = 1, verbose=True)
-
     if True: # Sompy SOM
         sm = SOMFactory.build(data, mapsize=[som_x, som_y], initialization='pca')
         sm.train(n_job = 1, shared_memory = 'no', verbose='info')
