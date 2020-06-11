@@ -23,39 +23,53 @@ with fits.open(path_COSMOS) as hdul:
     hdul.info()
 
 
+def cut_hight_hlr(cat, lim): # delete problems
+    idx = np.where(cat['sersicfit'][:,1]>lim)[0]
+    print(idx.shape)
+    cat = np.delete(cat,idx)
+    return cat
 
-def plot_compare(param_tu, param_cs, bins, *args):
+data_CS = cut_hight_hlr(data_CS, 40) # cut hight values
+
+data_CS['sersicfit'][:,1] *= 0.03 # converting
+
+
+
+def plot_compare(param_tu, param_cs, bins_tu, bins_cs, limits, *arg):
     fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(8,6))
 
+    #~~~~~~~~~~~~~~
     ax[0].set_title('True Universe catalog')
-    ax[0].hist(data_TU[param_tu], bins=bins) # histogram
+    ax[0].hist(data_TU[param_tu], bins=bins_tu) # histogram
     ax[0].axvline(np.mean(data_TU[param_tu]),
         color='k', linestyle='--') # vertical line for the mean value
-    if len(args[0])==2:
-        ax[0].set_xlim(args[0]) # x limits
+
+    ax[0].set_xlim(limits[0])
     ax[0].set_xlabel(param_tu)
 
+    #~~~~~~~~~~~~~~
     ax[1].set_title('COSMOS catalog')
-    if len(args)>2:# if a column has to be selected
-        ax[1].hist(data_CS[param_cs][:,args[-1]], bins=bins) # histogram
-        ax[1].axvline(np.mean(data_CS[param_cs][:,args[-1]]),
+    if arg:# if a column has to be selected
+        ax[1].hist(data_CS[param_cs][:,arg], bins=bins_cs) # histogram
+        ax[1].axvline(np.mean(data_CS[param_cs][:,arg]),
             color='k', linestyle='--', label='moyenne') # vertical line for the mean value
     else:
-        ax[1].hist(data_CS[param_cs], bins=bins) # histogram
+        ax[1].hist(data_CS[param_cs], bins=bins_cs) # histogram
         ax[1].axvline(np.mean(data_CS[param_cs]),
             color='k', linestyle='--', label='moyenne') # vertical line for the mean value
-    if len(args[0])==2:
-        ax[1].set_xlim(args[1]) # x limits
+
+    ax[1].set_xlim(limits[1]) # x limits
     ax[1].set_xlabel(param_cs)
 
+    #~~~~~~~~~~~~~~
     plt.tight_layout()
     plt.legend()
     plt.show()
 
-#plot_compare('mag', 'mag_auto', 100, (15,35), (15,35))
+plot_compare('mag', 'mag_auto', 300, 50, ((15,35), (15,35)))
 
-#plot_compare('half_light_radius', 'hlr', 1000, (-2,2),(-500,2000),1)
+#plot_compare('half_light_radius', 'sersicfit', 1000, 10, ((-1,2),(-1,2)),1)
 
-#plot_compare('q', 'sersicfit', 100, (-1,2),(-1,2),3)
+#plot_compare('q', 'sersicfit', 200, 100, ((-1,2),(-1,2)),3)
 
-plot_compare('SSersic_n', 'sersicfit', 100, (-2,8),(-2,8),2)
+#plot_compare('SSersic_n', 'sersicfit', 200, 70, ((-2,8),(-2,8)),2)
