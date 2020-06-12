@@ -1,11 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
-from astropy.visualization import astropy_mpl_style
-from minisom import MiniSom
-
-#plt.style.use(astropy_mpl_style)
-
 
 path_CS = "datas/real_galaxy_catalog_25.2.fits"
 path_CS_fits = "datas/real_galaxy_catalog_25.2_fits.fits"
@@ -60,6 +55,7 @@ def plot_some_gx(nb, num_fichier, *arg):
         for j in range(int(1e3*(num_fichier-1)),int(1e3*num_fichier)):
 
             x = data_fits['sersicfit'][j][3]
+
             if (x > q_nb[i] and x < q_nb[i+1] # if q is in the interval
                 and data['stamp_flux'][j]>80
                 #and data['NOISE_MEAN'][j]>1e-4
@@ -84,7 +80,6 @@ def plot_some_gx(nb, num_fichier, *arg):
     for i in range(len(hdul_image)): # collecting galaxies from file
         images.append(hdul_image[i].data)
 
-
     if arg: # selecting half of the datas
         nb = int(nb/arg[0])
         idx_get = idx_get[::arg[0]]
@@ -93,7 +88,6 @@ def plot_some_gx(nb, num_fichier, *arg):
         print("Selection :")
         print('1 - e :\n', q_get)
         print('\nindex :\n', idx_get)
-
 
     fig, ax = plt.subplots(nrows=1, ncols=nb)
     for i in range(nb): # plotting
@@ -104,8 +98,8 @@ def plot_some_gx(nb, num_fichier, *arg):
     plt.show()
 
 
-plot_some_gx(12, 49, 2) # stamp_flux > 80
-#plot_some_gx(12, 49, 3) # stamp_flux > 80
+#plot_some_gx(12, 49, 2) # stamp_flux > 80
+plot_some_gx(12, 49, 3) # stamp_flux > 80
 
 #plot_some_gx(6, 80) # stamp_flux > 80
 
