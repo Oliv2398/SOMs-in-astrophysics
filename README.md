@@ -21,3 +21,11 @@ Evolution de l'ellipticité
 Evolution de l'indice de Sersic
 
 ![COSMOS catalog](datas/gx_evo_sersic_COSMOS.png)
+
+
+
+Evolution croisée de l'indice de sersic et de l'ellipticité
+
+![COSMOS catalog](datas/evo.png)
+
+![COSMOS catalog](datas/evo_names.png)
