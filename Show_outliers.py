@@ -31,7 +31,7 @@ def get_index(vars, lim, out, num):
     else:
         raise ValueError("-out- should be 'sup' or 'inf'")
     print("index : %d ; vars : %d" % (idx, vars))
-    print("hlr %.2f ; sersic %.2f ; q %.2f" %(
+    print("hlr %.2f ; sersic %.2f ; q %.2f \n" %(
         data_fits['sersicfit'][:,1][idx],
         data_fits['sersicfit'][:,2][idx],
         data_fits['sersicfit'][:,3][idx]))
@@ -46,20 +46,21 @@ def get_file_hdu(idx):
     hdu = data['GAL_HDU'][idx]
     return file, hdu
 
-def show_outlier(vars, lim, out, num):
+def show_outlier(vars, lim, out, num, Show=True):
 
     idx = get_index(vars, lim, out, num)
 
     file, hdu = get_file_hdu(idx)
 
-    path = 'datas_full/COSMOS_25.2_training_sample/'
-    images_file = (path+'real_galaxy_images_25.2_n%d.fits')%(file)
+    if Show:
+        path = 'datas_full/COSMOS_25.2_training_sample/'
+        images_file = (path+'real_galaxy_images_25.2_n%d.fits')%(file)
 
-    hdul_image = fits.open(images_file)
-    image = hdul_image[hdu].data
+        hdul_image = fits.open(images_file)
+        image = hdul_image[hdu].data
 
-    plt.imshow(image, cmap='gray')
-    plt.show()
+        plt.imshow(image, cmap='gray')
+        plt.show()
 
 #------------------------------------
 
@@ -88,3 +89,8 @@ def show_outlier(vars, lim, out, num):
 
 # q
 #show_outlier(vars=3, lim=0.06, out='inf', num=100) # noisy, hlr=14.9 -> cluster of q and hlr linked
+
+# out of 1 :
+#for i in range(14):
+#    show_outlier(vars=3, lim=1, out='sup', num=i, Show=False)
+# hlr = 0 for each and noisy image
