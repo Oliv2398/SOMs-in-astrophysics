@@ -3,7 +3,7 @@
 
 
 
-Premiere approche avec les SOMs
+Première approche avec les SOMs
 
 Utilisation du package [minisom](https://github.com/JustGlowing/minisom) 
 
@@ -24,6 +24,8 @@ SOMs, distance map, hexagonal
 ![SOMs hexagonal](figures/hexa.png)
 
 
+
+---
 
 Etude des catalogues True Universe et COSMOS
 
