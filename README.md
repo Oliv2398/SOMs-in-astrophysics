@@ -7,25 +7,26 @@ Premiere approche avec les SOMs
 
 Utilisation du package [minisom](https://github.com/JustGlowing/minisom) 
 
+
+
+Test avec jeu de données de couleurs
+
+![Colors](figures/colors.png)
+
+SOMs, distance map, rectangle
+
+![SOMs rectangular](figures/rect.png)
+
+
+
+SOMs, distance map, hexagonal
+
+![SOMs hexagonal](figures/hexa.png)
+
+
+
 Etude des catalogues True Universe et COSMOS
-
-
-
-Evolution de l'ellipticité
-
-
-![COSMOS catalog](datas/gx_evo_COSMOS.png)
-
-
-
-Evolution de l'indice de Sersic
-
-![COSMOS catalog](datas/gx_evo_sersic_COSMOS.png)
-
-
 
 Evolution croisée de l'indice de sersic et de l'ellipticité
 
-![COSMOS catalog](datas/evo.png)
-
-![COSMOS catalog](datas/evo_names.png)
+![COSMOS catalog](figures/GxCOSMOS.png)
