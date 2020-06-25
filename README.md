@@ -31,4 +31,4 @@ Etude des catalogues True Universe et COSMOS
 
 Evolution croisée de l'indice de sersic et de l'ellipticité
 
-![COSMOS catalog](figures/GxCOSMOS.png)
+<img src="figures/GxCOSMOS.png" alt="COSMOS catalog" style="zoom:150%;" />
