@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
-from time import time
 
 # Loading datas
 
@@ -20,20 +19,57 @@ with fits.open(path_CS_fits) as hdul_fits:
     cols_fits = hdul_fits[1].columns # cols information
     Names_fits = cols_fits.names # cols names
 
+#----------------------------------------------------
+
+# hlr cut and normalization
+
+data_fits['sersicfit'][:,1] *= 0.03 # converting hlr
+
+"""
+# cut hight hlr values on the 2 catalogs
+idx = np.where(data_fits['sersicfit'][:,1]>2)[0]
+#print("nb d'elements suppr", idx.shape)
+data_fits = np.delete(data_fits,idx)
+data = np.delete(data,idx)
+
+#data_fits['sersicfit'][:,1] /= max(data_fits['sersicfit'][:,1]) # normalize
+"""
+nb_data = data_fits.shape[0]
+
+#----------------------------------------------------
 
 # Make subplots
 
-def subplots_QxS(nb=5, show_vars=False, start=0,
-                flux_min=80, noise_min=0, mag_min=0):
+def subplots_QxS(nb=5, vars_names=["q","sersic"],
+                show_axis=True, start=0, flux_min=80):
     # nb : size of the subplot
-    # show_vars : show q and sersic in the subplots
+    # vars_names : variables to plot
     # start : file number to start the research
 
-    q_nb = np.linspace(0.1, 0.9, nb+1) # intervals
-    q_get = np.zeros((nb,nb))
+    print("Mapping a {}x{} figure\n ".format(nb,nb))
 
-    s_nb = np.linspace(0, 6, nb+1) # intervals
-    s_get = np.zeros((nb,nb))
+    choice = {"sersic" : data_fits['sersicfit'][:,2],
+            "hlr" : data_fits['sersicfit'][:,1],
+            "q" : data_fits['sersicfit'][:,3],
+            "i" : data_fits['sersicfit'][:,0],
+            "mag" : data_fits['mag_auto']
+            }
+
+    intervals = {"sersic" : np.linspace(0, 6, nb+1),
+            "hlr" : np.linspace(0, 2, nb+1),
+            "q" : np.linspace(.1, .9, nb+1),
+            "i" : np.linspace(0, .15, nb+1),
+            "mag" : np.linspace(18, 25.2, nb+1)
+            }
+
+    vars0 = choice[vars_names[0]]
+    vars1 = choice[vars_names[1]]
+
+    int0 = intervals[vars_names[0]]
+    int1 = intervals[vars_names[1]]
+
+    get0 = np.zeros((nb,nb))
+    get1 = np.zeros((nb,nb))
 
     idx_get = np.zeros((nb,nb))
     file_get = np.zeros((nb,nb))
@@ -43,22 +79,21 @@ def subplots_QxS(nb=5, show_vars=False, start=0,
     else:
         start = 0
 
-    for i in range(nb): # for each q
-        for j in range(nb): # for each S
-            for k in range(start, data['GAL_HDU'].shape[0]):
+    print("Searching corresponding galaxies...")
+    for i in range(nb):
+        for j in range(nb):
+            for k in range(start, nb_data):
 
-                Q = data_fits['sersicfit'][k][3]
-                S = data_fits['sersicfit'][k][2]
+                elmt_vars0 = vars0[k]
+                elmt_vars1 = vars1[k]
 
-                if (Q > q_nb[i] and Q < q_nb[i+1] # if q is in the interval
-                    and (S > s_nb[j] and S < s_nb[j+1]) # if S is in the interval
+                if (elmt_vars0 > int0[i] and elmt_vars0 < int0[i+1]
+                    and (elmt_vars1 > int1[j] and elmt_vars1 < int1[j+1])
                     and data['stamp_flux'][k] > flux_min
-                    and data['NOISE_MEAN'][k] > noise_min # 3e-4
-                    and data['mag'][k] > mag_min # 18
                     ):
 
-                    q_get[i,j] = Q
-                    s_get[i,j] = S
+                    get0[i,j] = elmt_vars0
+                    get1[i,j] = elmt_vars1
 
                     idx_get[i,j] = data['GAL_HDU'][k] # get the index
 
@@ -68,72 +103,93 @@ def subplots_QxS(nb=5, show_vars=False, start=0,
                     else: # if 1 digit
                         file_get[i,j] = data['GAL_FILENAME'][k][25]
 
-                    #print(data['GAL_FILENAME'][k])
                     print('[ {} / {} ]'.format(i*nb+j+1, nb**2), end='\r')
                     break
 
-    assert (file_get!=0).all(), "can't find an element, change init choices"
-
-    print("\n\n1 - e :\n", q_get)
-    print("\nsersic :\n", s_get)
+    print("\n\n",vars_names[0]," :\n", get0)
+    print("\n",vars_names[1]," :\n", get1)
     print("\n-------------------------")
     print("\nindex :\n", idx_get)
     print("\nfile :\n", file_get)
 
     files = np.unique(file_get)
-
     print('\nfiles : real_galaxy_images_25.2_n( ).fits  ', files, '\n')
 
 
     path = 'datas_full/COSMOS_25.2_training_sample/'
+    filename = 'real_galaxy_images_25.2_n'
 
     # collecting galaxies from file
     images_file = []
     hdul_image = []
     for i in range(len(files)):
-        images_file.append((path+'real_galaxy_images_25.2_n%d.fits')%(files[i]))
-        hdul_image.append(fits.open(images_file[-1]))
+        if files[i]!=0:
+            images_file.append((path+filename+'%d.fits')%(files[i]))
+        else:
+            images_file.append(0)
+
+        try:
+            hdul_image.append(fits.open(images_file[-1]))
+        except:
+            hdul_image.append(0)
+
 
     images = np.zeros((nb,nb)).astype(object)
     for i in range(nb):
         for j in range(nb):
-            num_file = np.argwhere(file_get[i,j]==files)[0,0]
-            images[i,j]=hdul_image[ num_file ][ int(idx_get[i,j]) ].data
+            if file_get[i,j]!=0:
+                num_file = np.argwhere(file_get[i,j]==files)[0,0]
+            else:
+                num_file = np.argwhere(file_get[i,j]==files)[0,0] - 1
+
+            try:
+                images[i,j]=hdul_image[ num_file ][ int(idx_get[i,j]) ].data
+            except:
+                pass
 
 
     # plotting
     fig, ax = plt.subplots(nrows=nb, ncols=nb, figsize=(7.5,7.5))
-    for i in range(nb):
+
+    # cadre
+    if show_axis:
+        ax1 = fig.add_axes([0.123, 0.11, 0.78, 0.77], frameon=False)
+        ax1.patch.set_alpha(0.)
+        ax1.set_xticks(int1) ; ax1.set_xlabel(vars_names[1])
+        ax1.set_yticks(int0) ; ax1.set_ylabel(vars_names[0],rotation=0)
+        ax1.set_xlim(int1[0],int1[-1])
+        ax1.set_ylim(int0[-1],int0[0])
+
+    for i in range(nb): # galaxies
         for j in range(nb):
+            # hide axis
+            ax[j,i].set_axis_off()
 
             # subplot
-            ax[i,j].imshow(images[i,j], cmap='gray')
+            if file_get[j,i]!=0:
+                ax[j,i].imshow(images[j,i], cmap='gray')
+            else:
+                black=np.zeros((2,2,3))
+                ax[j,i].imshow(black)
 
-            # to see q and S in the titles
-            if show_vars:
-                ax[i,j].set_title('q={:.2f} s={:.2f}'.format(q_get[i,j],s_get[i,j]))
-
-            # hide axis
-            ax[i,j].set_axis_off()
-
-    if not show_vars and nb==5: # arrows
-        arrowproperties = dict(arrowstyle="simple", facecolor="black")
-
-        ax[-1,0].annotate('Q', xy=(-0.4, 0.3),
-                        xycoords='axes fraction',
-                        xytext=(-0.5, 5),
-                        bbox=dict(boxstyle="round", fc="0.8"),
-                        arrowprops=arrowproperties)
-
-        ax[0,0].annotate('Sersic', xy=(5, 1.42),
-                        xycoords='axes fraction',
-                        xytext=(0.5, 1.4),
-                        bbox=dict(boxstyle="round", fc="0.8"),
-                        arrowprops=arrowproperties)
-
-
-    plt.tight_layout()
+    plt.subplots_adjust(wspace=-0.05, hspace=-0.05) # side by side
     plt.show()
 
 
-subplots_QxS() # start = 18 
+subplots_QxS(nb=9, vars_names=["q","sersic"]) # vars_names y, x
+# sersic, hlr, q, i, mag
+
+def show_image_from_file(idx, num_file, infos=True):
+    path = 'datas_full/COSMOS_25.2_training_sample/'
+    file = (path+'real_galaxy_images_25.2_n%d.fits')%(num_file)
+    hdul_image = fits.open(file)
+
+    if infos:
+        print("magnitude :",data_fits['mag_auto'][idx+(num_file-1)*1000])
+        print("intensity at the hlr :",data_fits['sersicfit'][idx+(num_file-1)*1000][0])
+        print("hlr :",data_fits['sersicfit'][idx+(num_file-1)*1000][1])
+        print("Sersic :",data_fits['sersicfit'][idx+(num_file-1)*1000][2])
+        print("q :",data_fits['sersicfit'][idx+(num_file-1)*1000][3])
+
+    plt.imshow(hdul_image[idx].data)
+    plt.show()
