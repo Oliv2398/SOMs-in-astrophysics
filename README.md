@@ -29,6 +29,6 @@ SOMs, distance map, hexagonal
 
 Etude des catalogues True Universe et COSMOS
 
-Evolution croisée de l'indice de sersic et de l'ellipticité
+Evolution croisée de l'indice de sersic et de l'ellipticité pour le catalogue COSMOS
 
-<img src="figures/GxCOSMOS.png" alt="COSMOS catalog" style="zoom:150%;" />
+![COSMOS catalog](figures/GxCOSMOS.png)
