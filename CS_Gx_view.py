@@ -1,8 +1,16 @@
+# Roth Olivier 07/2020
+# Visualization of the galaxies from COSMOS catalog
+# as a fonction of certain parameters to be chosen
+
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 
-# Loading datas
+from time import time
+
+#----------------------------------------------------
+
+# Loading COSMOS catalog
 
 path_CS = "datas/real_galaxy_catalog_25.2.fits"
 path_CS_fits = "datas/real_galaxy_catalog_25.2_fits.fits"
@@ -19,34 +27,26 @@ with fits.open(path_CS_fits) as hdul_fits:
     cols_fits = hdul_fits[1].columns # cols information
     Names_fits = cols_fits.names # cols names
 
-#----------------------------------------------------
-
-# hlr cut and normalization
-
+nb_data = data_fits.shape[0] # number of rows
 data_fits['sersicfit'][:,1] *= 0.03 # converting hlr
 
-"""
-# cut hight hlr values on the 2 catalogs
-idx = np.where(data_fits['sersicfit'][:,1]>2)[0]
-#print("nb d'elements suppr", idx.shape)
-data_fits = np.delete(data_fits,idx)
-data = np.delete(data,idx)
-
-#data_fits['sersicfit'][:,1] /= max(data_fits['sersicfit'][:,1]) # normalize
-"""
-nb_data = data_fits.shape[0]
-
 #----------------------------------------------------
 
-# Make subplots
+# Main definition
 
-def subplots_QxS(nb=5, vars_names=["q","sersic"],
-                show_axis=True, start=0, flux_min=80):
-    # nb : size of the subplot
-    # vars_names : variables to plot
-    # start : file number to start the research
+def subplots_QxS(nb=5, vars_names=["q","sersic"], show_axis=False, start=0, flux_min=80, infos=True):
+    """
+    Params :
+     - nb : size of the subplot
+     - vars_names : variables to plot (y,x), between sersic, hlr, q, i, mag
+     - show_axis : set visible the axis -> the range of the variables
+     - start : file number to start the research
+     - flux_min : minimum flux for the galaxies
+     - infos : informations on the collected galaxies
+    """
 
     print("Mapping a {}x{} figure\n ".format(nb,nb))
+    print("----------------------")
 
     choice = {"sersic" : data_fits['sersicfit'][:,2],
             "hlr" : data_fits['sersicfit'][:,1],
@@ -62,10 +62,10 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
             "mag" : np.linspace(18, 25.2, nb+1)
             }
 
-    vars0 = choice[vars_names[0]]
+    vars0 = choice[vars_names[0]] # collecting variables
     vars1 = choice[vars_names[1]]
 
-    int0 = intervals[vars_names[0]]
+    int0 = intervals[vars_names[0]] # collecting ranges
     int1 = intervals[vars_names[1]]
 
     get0 = np.zeros((nb,nb))
@@ -75,11 +75,11 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
     file_get = np.zeros((nb,nb))
 
     if start!=0:
-        start = 1000 * (start-1)
+        start = 1000 * (start-1) # (each file contains 1000 Gx)
     else:
         start = 0
 
-    print("Searching corresponding galaxies...")
+    print("\nSearching corresponding galaxies...")
     for i in range(nb):
         for j in range(nb):
             for k in range(start, nb_data):
@@ -92,7 +92,7 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
                     and data['stamp_flux'][k] > flux_min
                     ):
 
-                    get0[i,j] = elmt_vars0
+                    get0[i,j] = elmt_vars0 # collecting Gx if the conditions are valid
                     get1[i,j] = elmt_vars1
 
                     idx_get[i,j] = data['GAL_HDU'][k] # get the index
@@ -105,21 +105,23 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
 
                     print('[ {} / {} ]'.format(i*nb+j+1, nb**2), end='\r')
                     break
-
-    print("\n\n",vars_names[0]," :\n", get0)
-    print("\n",vars_names[1]," :\n", get1)
-    print("\n-------------------------")
-    print("\nindex :\n", idx_get)
-    print("\nfile :\n", file_get)
-
+    print("\ndone")
+    print("\n----------------------")
     files = np.unique(file_get)
-    print('\nfiles : real_galaxy_images_25.2_n( ).fits  ', files, '\n')
 
+    if infos:
+        print("\n",vars_names[0]," :\n", get0)
+        print("\n",vars_names[1]," :\n", get1)
+        print("\n-------------------------")
+        print("\nindex :\n", idx_get)
+        print("\nfile :\n", file_get)
+        print('\nfiles : real_galaxy_images_25.2_n( ).fits  ', files)
+        print("\n----------------------")
 
     path = 'datas_full/COSMOS_25.2_training_sample/'
     filename = 'real_galaxy_images_25.2_n'
 
-    # collecting galaxies from file
+    print("\nCollecting galaxies from files...")
     images_file = []
     hdul_image = []
     for i in range(len(files)):
@@ -133,7 +135,6 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
         except:
             hdul_image.append(0)
 
-
     images = np.zeros((nb,nb)).astype(object)
     for i in range(nb):
         for j in range(nb):
@@ -146,7 +147,9 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
                 images[i,j]=hdul_image[ num_file ][ int(idx_get[i,j]) ].data
             except:
                 pass
-
+            print('[ {} / {} ]'.format(i*nb+j+1, nb**2), end='\r')
+    print("\ndone")
+    print("\n----------------------")
 
     # plotting
     fig, ax = plt.subplots(nrows=nb, ncols=nb, figsize=(7.5,7.5))
@@ -160,6 +163,8 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
         ax1.set_xlim(int1[0],int1[-1])
         ax1.set_ylim(int0[-1],int0[0])
 
+
+    print("\nMapping...")
     for i in range(nb): # galaxies
         for j in range(nb):
             # hide axis
@@ -173,11 +178,12 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"],
                 ax[j,i].imshow(black)
 
     plt.subplots_adjust(wspace=-0.05, hspace=-0.05) # side by side
-    plt.show()
+    print("done")
+    plt.show(block=False)
 
 
-subplots_QxS(nb=9, vars_names=["q","sersic"]) # vars_names y, x
-# sersic, hlr, q, i, mag
+subplots_QxS(nb=6, flux_min=50)
+
 
 def show_image_from_file(idx, num_file, infos=True):
     path = 'datas_full/COSMOS_25.2_training_sample/'
