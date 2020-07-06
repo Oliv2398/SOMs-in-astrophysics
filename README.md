@@ -9,19 +9,19 @@ Utilisation du package [minisom](https://github.com/JustGlowing/minisom)
 
 
 
-Test avec jeu de données de couleurs
+Première approche avec un jeu de données de couleurs, random et uniforme :
 
 ![Colors](figures/colors.png)
 
-SOMs, distance map, rectangle
+SOM, distance map, ainsi que les poids de chaque couleur, pour un topologie rectangulaire :
 
-![SOMs rectangular](figures/rect.png)
+![SOMs rectangular](figures/SOM_rect_norm_uniform.png)
 
 
 
-SOMs, distance map, hexagonal
+SOM, distance map, ainsi que les poids de chaque couleur, pour un topologie hexagonale :
 
-![SOMs hexagonal](figures/hexa.png)
+![SOMs hexagonal](figures/SOM_hexa_norm_uniform.png)
 
 
 
