@@ -6,8 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 
-from time import time
-
 #----------------------------------------------------
 
 # Loading COSMOS catalog
@@ -34,7 +32,7 @@ data_fits['sersicfit'][:,1] *= 0.03 # converting hlr
 
 # Main definition
 
-def subplots_QxS(nb=5, vars_names=["q","sersic"], show_axis=False, start=0, flux_min=80, infos=True):
+def CS_view(nb=5, vars_names=["q","sersic"], show_axis=False, start=0, flux_min=80, infos=True):
     """
     Params :
      - nb : size of the subplot
@@ -118,6 +116,7 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"], show_axis=False, start=0, flux
         print('\nfiles : real_galaxy_images_25.2_n( ).fits  ', files)
         print("\n----------------------")
 
+
     path = 'datas_full/COSMOS_25.2_training_sample/'
     filename = 'real_galaxy_images_25.2_n'
 
@@ -182,7 +181,7 @@ def subplots_QxS(nb=5, vars_names=["q","sersic"], show_axis=False, start=0, flux
     plt.show(block=False)
 
 
-subplots_QxS(nb=6, flux_min=50)
+CS_view()
 
 
 def show_image_from_file(idx, num_file, infos=True):
