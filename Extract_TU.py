@@ -43,40 +43,26 @@ def get_params(cat, i, pixel_scale):   #cat = TU cat, i = row of the cat
     # Light radius in pixel
     light_radius = TotRadius(radiusBulge, radiusDisk, bt) / pixel_scale
     half_light_radius = float(light_radius) * np.sqrt(q)
-    return [mag, half_light_radius, q, SSersic_n, PA, bt]
+    return [mag, half_light_radius, q, SSersic_n]
 
 
-def cut_hight_hlr(cat, lim): # delete hlr problems
-    idx = np.where(cat[:,1]>lim)[0]
-    print("element suppr :", idx.shape)
-    cat = np.delete(cat,idx)
-    return cat
+def to_fits_file(path, new_file_name): # transform list to fits TU catalog
 
+    TU = galsim.Catalog(path)
 
-def to_fits_file(): # transform list to fits TU catalog
-    path_TU = "datas/TU_cat_field_0.list"
-
-    TU = galsim.Catalog(path_TU)
-
-    idx = 0
     Params=[]
-    while True: # extracting lines one by one
-        try:
-            para = get_params(TU, idx, 1)
-            Params.append(para)
-            idx+=1
-            print(idx, end='\r')
-        except :
-            print(idx, "lines")
-            break
+    for i in range(TU.nobjects):
+        Params.append(get_params(TU, i, 1))
+        if i%10:
+            print('\r [ %d / %d ] ; %d %%'%(i+1, TU.nobjects, 100*(i+1)/TU.nobjects), end='')
 
     Params = np.concatenate(Params)
-    Params = Params.T.reshape(idx,6)
+    Params = Params.T.reshape(TU.nobjects, 4)
 
-    #Params = cut_hight_hlr(Params,1) # cut hlr
-
-    t = Table(Params, names=('mag', 'half_light_radius', 'q', 'SSersic_n', 'PA', 'bt'))
-    t.write('TU_created.fits', format='fits') # creating the fits file
+    t = Table(Params, names=('mag', 'half_light_radius', 'q', 'SSersic_n'))
+    t.write(new_file_name+'.fits', format='fits') # creating the fits file
 
 
-to_fits_file()
+path = "datas/TU_cat_field_0.list"
+file_name = "TU_created0"
+#to_fits_file(path, file_name)
