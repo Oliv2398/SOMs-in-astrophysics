@@ -1,4 +1,4 @@
-# Stage M1 Olivier
+# Etude des catalogues COSMOS et True Universe à l'aide des Self Organizing Maps
 
 
 
