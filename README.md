@@ -32,3 +32,15 @@ Etude des catalogues True Universe et COSMOS
 Evolution croisée de l'indice de sersic et de l'ellipticité pour le catalogue COSMOS
 
 ![COSMOS catalog](figures/GxCOSMOS.png)
+
+
+
+SOM entrainé avec True Universe :
+
+![SOM TU CS](figures/som_tu_cs.png)
+
+
+
+Heatmap correspondante avec les données de COSMOS :
+
+![heatmap COSMOS](figures/heatmap_tu_cs.png)
