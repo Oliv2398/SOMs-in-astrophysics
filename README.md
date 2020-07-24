@@ -35,9 +35,13 @@ Evolution croisée de l'indice de sersic et de l'ellipticité pour le catalogue 
 
 
 
+
+
 SOM entrainé avec True Universe :
 
 ![SOM TU CS](figures/som_tu_cs.png)
+
+
 
 
 
