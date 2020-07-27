@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_hex
 
 from minisom import MiniSom
 from som_package.minisom_perso.minisom_perso import MiniSom_perso
@@ -186,29 +185,42 @@ def plot_error(dict_vars):
 #------------------------------------------------------------
 
 # subplots
-def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangular'):
+def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_weigths=False):
     """
     Show the SOM, the distance map and the variables weights
 
     Params:
-    - data : array, training dataset
     - som, MiniSom, trained SOM
-    - weights : array, weights of the SOM
 
     Optional params:
     - var_names : list, variable names
     - topology : str, -rectangular- or -hexagonal-
+    - rescale_weigths : bool, in case the SOM is uninterpretable
     """
-    rows, cols = data.shape
-    som_x, som_y = weights.shape[:2]
-
-    assert cols>1, 'Not enought variables, need at least 2'
+    weights = som.get_weights().copy()
+    som_x, som_y, cols = weights.shape
 
     fig, ax = plt.subplots(nrows=2, ncols=cols, figsize=(14,9))
+
+    # rescale weights for a better visualization
+    if rescale_weigths:
+        for i in range(cols):
+            weights[:,:,i] = (weights[:,:,i] - np.min(weights[:,:,i]))/(np.max(weights[:,:,i])-np.min(weights[:,:,i]))
+
 
     # rectangular subplots
     #------------------------------------
     if topology=='rectangular':
+        # distance map
+        ax1 = ax[0,1].imshow(som.distance_map())
+
+        # variables plots
+        for i in range(cols):
+            ax[1,i].imshow(weights[:,:,i])
+
+        if rescale_weigths and cols==4 and topology!='hexagonal':
+            weights[:,:,-1] = weights[:,:,-1]*0+1
+
         # SOMs
         if cols in (3, 4):
             ax[0,0].imshow(weights)
@@ -223,19 +235,13 @@ def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangula
             print("Can't show a %dD matrix "%(cols))
             print("-----------------------\n")
 
-        # distance map
-        ax1 = ax[0,1].imshow(som.distance_map())
-
-        # variables plots
-        for i in range(cols):
-            ax[1,i].imshow(weights[:,:,i])
-
 
     # hexagonal subplots
     #------------------------------------
     if topology=='hexagonal':
         from matplotlib.patches import RegularPolygon
         from matplotlib.collections import PatchCollection
+        from matplotlib.colors import to_hex
 
         xx, yy = som.get_euclidean_coordinates()
         wy = yy*np.sqrt(3)/2
@@ -430,7 +436,7 @@ def _interactive_som(data, names, sigma, learning_rate, iterations, topology, si
                          topology = topology,
                          size=size)
 
-    PlotSOMs(data, som, wts, names, topology=topology)
+    PlotSOMs(som, names, topology=topology, rescale_weigths=False)
 
     if info:
         print('quantization error :', som.quantization_error(data))
@@ -460,7 +466,6 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
             som_x, som_y = size
         except:
             raise ValueError("wrong input for -size-")
-
 
     layout = Layout(width='50%', height='20px')
 
@@ -716,11 +721,11 @@ def compare_CS_TU(cat1, cat2, norm=True):
         limits={"mag":[15,35],"hlr":[-.1,2],"sersic":[-.1,6.1],"q":[-.05,1.05]}
 
     plt.figure(figsize=(20,4))
-    for i, vars in enumerate(data_cs_):
+    for i, vars in enumerate(cat1):
         plt.subplot(1,4,i+1)
         plt.title(vars)
-        plt.hist(data_cs_[vars], bins=bins[vars], density=True, label="COSMOS")
-        plt.hist(data_tu_fuse_[vars], bins=bins[vars], density=True, label="TU", alpha=.7)
+        plt.hist(cat1[vars], bins=bins[vars], density=True, label="COSMOS")
+        plt.hist(cat2[vars], bins=bins[vars], density=True, label="TU", alpha=.7)
         plt.xlim(limits[vars])
     plt.legend()
     plt.show()
