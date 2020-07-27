@@ -152,7 +152,7 @@ except:
     def train_and_get_error(data, sigma, learning_rate, iterations,
         frequence, topological_error=False, animated=True, sig_view=True):
         """
-        Manual training to see the evolution all along the training.
+        Manual training to see the evolution all along.
 
         Params:
         - data : array, training dataset
@@ -222,8 +222,6 @@ except:
 
         return dict_vars
 
-
-
 def plot_error(dict_vars):
         """
         Some plots from the manual training
@@ -251,6 +249,50 @@ def plot_error(dict_vars):
 
         plt.show()
 
+#------------------------------------------------------------
+
+# quantization and topographic error plots for different sigma
+def multi_sigma(nb_sigma, data):
+    """
+    Quantization and topographic error plots for different sigma.
+
+    Params:
+    - nb_sigma : int, number of sigma to be tested
+    - data : array, training dataset
+
+    Return:
+    - weights_multi : array, weigths from all the trainings
+    - q_error : array, quantization error from all the trainings
+    - t_error : array, topographic error from all the trainings
+    """
+    sigma = np.linspace(1.5,14,nb_sigma)
+    learning_rate = 1
+
+    q_error = np.zeros(nb_sigma)
+    t_error = np.zeros(nb_sigma)
+
+    weights_multi = []
+
+    for i, sig in enumerate(sigma):
+        som, weights = train_som(data, sig, learning_rate, 2000, size=(30,30))
+        weights_multi.append(weights)
+        q_error[i] = som.quantization_error(data)
+        t_error[i] = som.topographic_error(data)
+        print("\r",i+1, "/", nb_sigma, end='')
+
+    plt.figure(figsize=(12,4))
+    plt.subplot(121)
+    plt.plot(sigma, q_error)
+    plt.xlabel('sigma')
+    plt.ylabel('quantization error')
+
+    plt.subplot(122)
+    plt.plot(sigma, t_error)
+    plt.xlabel('sigma')
+    plt.ylabel('topographic error')
+    plt.show()
+
+    return weights_multi, q_error, t_error
 
 #------------------------------------------------------------
 
@@ -578,9 +620,7 @@ def dat_color(nb=25000, more_dim=0):
     - more_dim : int, number of cols
 
     Return:
-    - nb : int, number of rows
     - data : array, dataset of colors
-    - names : list, ['Red', 'Green', 'Blue']
     """
     dat1 = np.random.uniform(0,1,nb)
     dat2 = np.random.uniform(0,1,nb)
@@ -594,7 +634,7 @@ def dat_color(nb=25000, more_dim=0):
             data = np.vstack((data.T, dat3)).T
 
     names = ['Red', 'Green', 'Blue']
-    return nb, data, names
+    return data
 
 # random normalized colors
 def dat_color_norm(nb=25000):
