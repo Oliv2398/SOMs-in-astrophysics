@@ -238,14 +238,12 @@ def plot_error(dict_vars):
             plt.plot(dict_vars["iter_x"], dict_vars["t_error"])
             plt.ylabel('topological error')
 
-        try:
+        if "sigma" in dict_vars:
             fig, ax = plt.subplots(1,2,figsize=(10,4))
             ax[0].plot(dict_vars["iter_x"], dict_vars["sigma"])
-            ax[0].set_ylabel('sigma')
+            ax[0].set_ylabel("sigma")
             ax[1].plot(dict_vars["iter_x"], dict_vars["learning_rate"])
             ax[1].set_ylabel('learning rate')
-        except:
-            pass
 
         plt.figure(figsize=(10,4))
         plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
