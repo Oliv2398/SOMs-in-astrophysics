@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_hex
 
 from minisom import MiniSom
-from som_package.minisom_perso.minisom_perso import MiniSom_perso
 
 from astropy.io import fits
 
@@ -57,158 +55,289 @@ def train_som(data, sigma, learning_rate, iterations,
 #------------------------------------------------------------
 
 # manual training
-def train_and_get_error(data, sigma, learning_rate, iterations,
-    frequence, topological_error=False, animated=True, sig_view=True):
-    """
-    Training with a modified MiniSom to get the sigma and learning rate through the process
+try :
+    from som_package.minisom_perso.minisom_perso import MiniSom_perso
 
-    Params:
-    - data : array, training dataset
-    - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
-    - learning rate : float, determines the step size at each iteration
-    - iterations : int, determine the time of the training
-    - frequence : int, learning interval for errors
+    def train_and_get_error(data, sigma, learning_rate, iterations,
+        frequence, topological_error=False, animated=True, sig_view=True):
+        """
+        Training with a modified MiniSom to get the sigma and learning rate through the process
 
-    Optional params:
-    - topological_error : bool, whether the topological error is to be learned or not
-    - animated : bool, show the SOM on live during the training
-    - sig_view : bool, show the sigma on live during the training
+        Params:
+        - data : array, training dataset
+        - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
+        - learning rate : float, determines the step size at each iteration
+        - iterations : int, determine the time of the training
+        - frequence : int, learning interval for errors
 
-    Return :
-    - dict_vars : dict,
-        iterations,
-        quantization error for the training and validation dataset,
-        topological error if -topological_error- is activated,
-        mean of the distance map (U-matrix),
-        sigma,
-        learning rate
-    """
-    from sklearn.model_selection import train_test_split
+        Optional params:
+        - topological_error : bool, whether the topological error is to be learned or not
+        - animated : bool, show the SOM on live during the training
+        - sig_view : bool, show the sigma on live during the training
 
-    X_train, X_test = train_test_split(data, test_size=0.05)
+        Return :
+        - dict_vars : dict,
+            iterations,
+            quantization error for the training dataset,
+            topological error if -topological_error- is activated,
+            mean of the distance map (U-matrix),
+            sigma,
+            learning rate
+        """
+        rows, cols = data.shape
+        som_x = int(np.sqrt(5*np.sqrt(rows)))
+        som_y = som_x
 
-    rows, cols = X_train.shape
-    som_x = int(np.sqrt(5*np.sqrt(rows)))
-    som_y = som_x
+        som = MiniSom_perso(som_x, som_y, cols, sigma, learning_rate)
+        som.random_weights_init(data)
 
-    som = MiniSom_perso(som_x, som_y, cols, sigma, learning_rate)
-    som.random_weights_init(X_train)
+        dict_vars ={"iter_x":[],
+                    "q_error":[],
+                    "mapmean":[],
+                    "sigma":[],
+                    "learning_rate":[]}
 
-    dict_vars ={"iter_x":[],
-                "q_error":[],
-                "q_error_val":[],
-                "mapmean":[],
-                "sigma":[],
-                "learning_rate":[]}
+        if topological_error:
+            dict_vars["t_error"]=[]
 
-    if topological_error:
-        dict_vars["t_error"]=[]
+        if animated:
+            from IPython.display import clear_output
 
-    if animated:
-        from IPython.display import clear_output
+        for i in range(iterations):
+            rand_i = np.random.randint(len(data)) # This corresponds to train_random() method.
 
-    for i in range(iterations):
-        rand_i = np.random.randint(len(X_train)) # This corresponds to train_random() method.
+            ####
+            # modification here, original -som.update()- doesn't return anything
+            sigma_i, learning_rate_i = som.update_perso(data[rand_i], som.winner(data[rand_i]), i, iterations)
+            ####
 
-        ####
-        # modification here, original -som.update()- doesn't return anything
-        sigma_i, learning_rate_i = som.update_perso(X_train[rand_i], som.winner(X_train[rand_i]), i, iterations)
-        ####
+            if (i+1) % frequence == 0:
+                q_error = som.quantization_error(data)
+                dict_vars["q_error"].append(q_error)
 
-        if (i+1) % frequence == 0:
-            q_error = som.quantization_error(X_train) # loss
-            q_error_val = som.quantization_error(X_test) # val_loss
-            dict_vars["q_error"].append(q_error)
-            dict_vars["q_error_val"].append(q_error_val)
+                if topological_error:
+                    t_error = som.topographic_error(data)
+                    dict_vars["t_error"].append(t_error)
 
-            if topological_error:
-                t_error = som.topographic_error(X_train) # topo. error
-                dict_vars["t_error"].append(t_error)
+                dict_vars["iter_x"].append(i)
+                dict_vars["mapmean"].append(np.mean(som.distance_map()))
+                dict_vars["sigma"].append(sigma_i)
+                dict_vars["learning_rate"].append(learning_rate_i)
 
-            dict_vars["iter_x"].append(i)
-            dict_vars["mapmean"].append(np.mean(som.distance_map()))
-            dict_vars["sigma"].append(sigma_i)
-            dict_vars["learning_rate"].append(learning_rate_i)
+                if not animated:
+                    print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
 
-            if not animated:
-                print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
+                if animated: # imshow weights and distance map during the training
+                    fig, ax = plt.subplots(1, 2, figsize=(14,7))
 
-            if animated: # imshow weights and distance map during the training
-                fig, ax = plt.subplots(1, 2, figsize=(14,7))
+                    ax[0].imshow(som.get_weights())
+                    ax[0].set_title('sigma %.2f' % sigma_i)
+                    ax[0].axis('off')
+                    ax[1].imshow(som.distance_map())
+                    ax[1].set_title('distance map ; mean = %.2f' % np.mean(som.distance_map()))
+                    ax[1].axis('off')
 
-                ax[0].imshow(som.get_weights())
-                ax[0].set_title('sigma %.2f' % sigma_i)
-                ax[0].axis('off')
-                ax[1].imshow(som.distance_map())
-                ax[1].set_title('distance map ; mean = %.2f' % np.mean(som.distance_map()))
-                ax[1].axis('off')
+                    if sig_view:
+                        win = som.winner(data[rand_i])
+                        circle = plt.Circle(xy = win[::-1], radius = sigma_i, edgecolor='k', fill=False)
+                        ax[0].add_artist(circle)
 
-                if sig_view:
-                    win = som.winner(X_train[rand_i])
-                    circle = plt.Circle(xy = win[::-1], radius = sigma_i, edgecolor='k', fill=False)
-                    ax[0].add_artist(circle)
+                    plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
+                    plt.show()
+                    clear_output(wait=True)
 
-                plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
-                plt.show()
-                clear_output(wait=True)
+        return dict_vars
 
-    return dict_vars
+except:
+    def train_and_get_error(data, sigma, learning_rate, iterations,
+        frequence, topological_error=False, animated=True, sig_view=True):
+        """
+        Manual training to see the evolution all along.
+
+        Params:
+        - data : array, training dataset
+        - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
+        - learning rate : float, determines the step size at each iteration
+        - iterations : int, determine the time of the training
+        - frequence : int, learning interval for errors
+
+        Optional params:
+        - topological_error : bool, whether the topological error is to be learned or not
+        - animated : bool, show the SOM on live during the training
+
+        Return :
+        - dict_vars : dict,
+            iterations,
+            quantization error for the training dataset,
+            topological error if -topological_error- is activated,
+            mean of the distance map (U-matrix),
+        """
+        rows, cols = data.shape
+        som_x = int(np.sqrt(5*np.sqrt(rows)))
+        som_y = som_x
+
+        som = MiniSom(som_x, som_y, cols, sigma, learning_rate)
+        som.random_weights_init(data)
+
+        dict_vars ={"iter_x":[],
+                    "q_error":[],
+                    "mapmean":[]}
+
+        if topological_error:
+            dict_vars["t_error"]=[]
+
+        if animated:
+            from IPython.display import clear_output
+
+        for i in range(iterations):
+            rand_i = np.random.randint(len(data)) # This corresponds to train_random() method.
+
+            som.update(data[rand_i], som.winner(data[rand_i]), i, iterations)
+
+            if (i+1) % frequence == 0:
+                dict_vars["iter_x"].append(i)
+                q_error = som.quantization_error(data)
+                dict_vars["q_error"].append(q_error)
+                dict_vars["mapmean"].append(np.mean(som.distance_map()))
+
+                if topological_error:
+                    t_error = som.topographic_error(data)
+                    dict_vars["t_error"].append(t_error)
+
+                if not animated:
+                    print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
+
+                if animated: # imshow weights and distance map during the training
+                    fig, ax = plt.subplots(1, 2, figsize=(14,7))
+
+                    ax[0].imshow(som.get_weights())
+                    ax[0].axis('off')
+                    ax[1].imshow(som.distance_map())
+                    ax[1].set_title('distance map ; mean = %.2f' % dict_vars["mapmean"][-1])
+                    ax[1].axis('off')
+
+                    plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
+                    plt.show()
+                    clear_output(wait=True)
+
+        return dict_vars
 
 def plot_error(dict_vars):
-    """
-    Some plots from the manual training
-    """
-    plt.figure(figsize=(10,4))
-    plt.plot(dict_vars["iter_x"], dict_vars["q_error"], 'b--', label='loss')
-    plt.plot(dict_vars["iter_x"], dict_vars["q_error_val"], 'go', label='val_loss')
-    plt.ylabel('quantization error')
-    plt.xlabel('iteration')
-    plt.legend()
-
-    if "t_error" in dict_vars:
+        """
+        Some plots from the manual training
+        """
         plt.figure(figsize=(10,4))
-        plt.plot(dict_vars["iter_x"], dict_vars["t_error"])
-        plt.ylabel('topological error')
+        plt.plot(dict_vars["iter_x"], dict_vars["q_error"])
+        plt.ylabel('quantization error')
+        plt.xlabel('iteration')
 
+        if "t_error" in dict_vars:
+            plt.figure(figsize=(10,4))
+            plt.plot(dict_vars["iter_x"], dict_vars["t_error"])
+            plt.ylabel('topological error')
 
-    fig, ax = plt.subplots(1,2,figsize=(10,4))
-    ax[0].plot(dict_vars["iter_x"], dict_vars["sigma"], label="sigma")
-    ax[0].legend()
-    ax[1].plot(dict_vars["iter_x"], dict_vars["learning_rate"], label="learning rate")
-    ax[1].legend()
+        if "sigma" in dict_vars:
+            fig, ax = plt.subplots(1,2,figsize=(10,4))
+            ax[0].plot(dict_vars["iter_x"], dict_vars["sigma"])
+            ax[0].set_ylabel("sigma")
+            ax[1].plot(dict_vars["iter_x"], dict_vars["learning_rate"])
+            ax[1].set_ylabel('learning rate')
 
-    plt.figure(figsize=(10,4))
-    plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
-    plt.ylabel('mean of the distance map')
+        plt.figure(figsize=(10,4))
+        plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
+        plt.ylabel('mean of the distance map')
 
+        plt.show()
+
+#------------------------------------------------------------
+
+# quantization and topographic error plots for different sigma
+def multi_sigma(nb_sigma, data):
+    """
+    Quantization and topographic error plots for different sigma.
+
+    Params:
+    - nb_sigma : int, number of sigma to be tested
+    - data : array, training dataset
+
+    Return:
+    - weights_multi : array, weigths from all the trainings
+    - q_error : array, quantization error from all the trainings
+    - t_error : array, topographic error from all the trainings
+    """
+    sigma = np.linspace(1.5,14,nb_sigma)
+    learning_rate = 1
+
+    q_error = np.zeros(nb_sigma)
+    t_error = np.zeros(nb_sigma)
+
+    weights_multi = []
+
+    for i, sig in enumerate(sigma):
+        som, weights = train_som(data, sig, learning_rate, 2000, size=(30,30))
+        weights_multi.append(weights)
+        q_error[i] = som.quantization_error(data)
+        t_error[i] = som.topographic_error(data)
+        print("\r",i+1, "/", nb_sigma, end='')
+
+    plt.figure(figsize=(12,4))
+    plt.subplot(121)
+    plt.plot(sigma, q_error)
+    plt.xlabel('sigma')
+    plt.ylabel('quantization error')
+
+    plt.subplot(122)
+    plt.plot(sigma, t_error)
+    plt.xlabel('sigma')
+    plt.ylabel('topographic error')
     plt.show()
+
+    return weights_multi, q_error, t_error
 
 #------------------------------------------------------------
 
 # subplots
-def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangular'):
+def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_weigths=False, colorbars=False):
     """
     Show the SOM, the distance map and the variables weights
 
     Params:
-    - data : array, training dataset
     - som, MiniSom, trained SOM
-    - weights : array, weights of the SOM
 
     Optional params:
     - var_names : list, variable names
     - topology : str, -rectangular- or -hexagonal-
+    - rescale_weigths : bool, in case the SOM is uninterpretable
+    - colorbars : bool, adding colorbars the the plots
     """
-    rows, cols = data.shape
-    som_x, som_y = weights.shape[:2]
-
-    assert cols>1, 'Not enought variables, need at least 2'
+    weights = som.get_weights().copy()
+    som_x, som_y, cols = weights.shape
 
     fig, ax = plt.subplots(nrows=2, ncols=cols, figsize=(14,9))
+
+    # rescale weights for a better visualization
+    if rescale_weigths:
+        for i in range(cols):
+            weights[:,:,i] = (weights[:,:,i] - np.min(weights[:,:,i]))/(np.max(weights[:,:,i])-np.min(weights[:,:,i]))
+
 
     # rectangular subplots
     #------------------------------------
     if topology=='rectangular':
+        # distance map
+        ax1 = ax[0,1].imshow(som.distance_map())
+        if colorbars:
+            fig.colorbar(ax1, ax=ax[0,1])
+
+        # variables plots
+        for i in range(cols):
+            axi = ax[1,i].imshow(weights[:,:,i])
+            if colorbars:
+                fig.colorbar(axi, ax=ax[1,i])
+
+        if rescale_weigths and cols==4 and topology!='hexagonal':
+            weights[:,:,-1] = weights[:,:,-1]*0+1
+
         # SOMs
         if cols in (3, 4):
             ax[0,0].imshow(weights)
@@ -223,19 +352,13 @@ def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangula
             print("Can't show a %dD matrix "%(cols))
             print("-----------------------\n")
 
-        # distance map
-        ax1 = ax[0,1].imshow(som.distance_map())
-
-        # variables plots
-        for i in range(cols):
-            ax[1,i].imshow(weights[:,:,i])
-
 
     # hexagonal subplots
     #------------------------------------
     if topology=='hexagonal':
         from matplotlib.patches import RegularPolygon
         from matplotlib.collections import PatchCollection
+        from matplotlib.colors import to_hex
 
         xx, yy = som.get_euclidean_coordinates()
         wy = yy*np.sqrt(3)/2
@@ -277,13 +400,16 @@ def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangula
 
         # distance map
         pc1 = PatchCollection(patch_list1, match_original=True)
-        ax[0,1].add_collection(pc1)
+        ax1 = ax[0,1].add_collection(pc1)
+        if colorbars:
+            fig.colorbar(ax1, ax=ax[0,1])
 
         # each layer of the weights
         for i in range(cols):
             pci = PatchCollection(patch_listi[i], match_original=True)
-            ax[1,i].add_collection(pci)
-
+            axi = ax[1,i].add_collection(pci)
+            if colorbars:
+                fig.colorbar(axi, ax=ax[1,i])
 
         # limits and axis
         for i in range(2):
@@ -312,7 +438,7 @@ def PlotSOMs(data, som, weights, var_names=(["R","G","B"]), topology='rectangula
 #------------------------------------------------------------
 
 # heatmap
-def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default'):
+def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', compare=None):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -326,6 +452,7 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
     - hit_count : bool, number of hit in each cell
     - hist_vars : bool, histogram of the dataset's variables
     - figsize : tuple, size of the figure
+    - compare : array, to compare the heatmap with an array (could be a weight or other) of dimension 1
     """
 
     if hist_vars:
@@ -341,9 +468,16 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
 
     # size of the figure
     if figsize=='default':
-        fig, ax = plt.subplots(1,figsize=(14,14))
+        figsize=(14,14)
+    else:
+        pass
+
+    # subplots creation
+    if compare is not None:
+        fig, ax = plt.subplots(1,2,figsize=figsize)
     else:
         fig, ax = plt.subplots(1,figsize=figsize)
+
 
     from matplotlib.colors import LogNorm
 
@@ -357,7 +491,11 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
         else:
             norm = None
 
-        ax.imshow(activ_resp, norm = norm) ###
+        if compare is not None:
+            ax[0].imshow(activ_resp, norm = norm)
+            ax[1].imshow(compare)
+        else:
+            ax.imshow(activ_resp, norm = norm)
 
 
         if hit_count:
@@ -367,9 +505,14 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                 for j in range(som_y):
                     if activ_resp[i,j]!=0: # don't show inactivated cells
                         # i,j inverted in plt.text because of the minisom's coordinates problem
-                        ax.text(j, i, int(activ_resp[i,j]),
-                                horizontalalignment='center',
-                                verticalalignment='center')
+                        if compare is not None:
+                            ax[0].text(j, i, int(activ_resp[i,j]),
+                                    horizontalalignment='center',
+                                    verticalalignment='center')
+                        else:
+                            ax.text(j, i, int(activ_resp[i,j]),
+                                    horizontalalignment='center',
+                                    verticalalignment='center')
 
     # hexagonal imshow
     #------------------------------------
@@ -402,18 +545,48 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                                 facecolor = c))
 
         pc = PatchCollection(patch_list, match_original=True)
-        ax.add_collection(pc)
+
+
+        if compare is not None:
+            ax[0].add_collection(pc)
+
+            compare2 = compare.copy()
+            compare2 =  compare2.flatten()
+            pixel_color0 = plt.cm.viridis(compare2)
+            patch_list1=[]
+            for c0,x,y in zip(pixel_color0, xx.flat, wy.flat):
+                patch_list1.append(RegularPolygon(xy = (x, y),
+                                                numVertices = 6,
+                                                radius = .95/np.sqrt(3)+.03,
+                                                facecolor = c0))
+            pc1 = PatchCollection(patch_list1, match_original=True)
+            ax[1].add_collection(pc1)
+        else:
+            ax.add_collection(pc)
 
         for i in range(som_x):
             for j in range(som_y):
-              if activ_resp[i,j]!=0 and hit_count:
-                    ax.text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
-                                    horizontalalignment='center',
-                                    verticalalignment='center')
+                if activ_resp[i,j]!=0 and hit_count:
+                    if compare is not None:
+                        ax[0].text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
+                                horizontalalignment='center',
+                                verticalalignment='center')
+                    else:
+                        ax.text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
+                                horizontalalignment='center',
+                                verticalalignment='center')
 
-        ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
-        ax.set_aspect('equal')
-        ax.axis('off')
+        if compare is not None:
+            ax[0].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax[1].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax[0].set_aspect('equal')
+            ax[1].set_aspect('equal')
+            ax[0].axis('off')
+            ax[1].axis('off')
+        else:
+            ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax.set_aspect('equal')
+            ax.axis('off')
 
     plt.tight_layout()
     plt.show()
@@ -430,7 +603,7 @@ def _interactive_som(data, names, sigma, learning_rate, iterations, topology, si
                          topology = topology,
                          size=size)
 
-    PlotSOMs(data, som, wts, names, topology=topology)
+    PlotSOMs(som, names, topology=topology, rescale_weigths=False)
 
     if info:
         print('quantization error :', som.quantization_error(data))
@@ -460,7 +633,6 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
             som_x, som_y = size
         except:
             raise ValueError("wrong input for -size-")
-
 
     layout = Layout(width='50%', height='20px')
 
@@ -494,7 +666,7 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
 #------------------------------------------------------------
 
 # random colors
-def dat_color(nb=25000, more_dim=0):
+def dat_color(nb=40000, more_dim=0):
     """
     Create a random dataset of colors
 
@@ -503,9 +675,7 @@ def dat_color(nb=25000, more_dim=0):
     - more_dim : int, number of cols
 
     Return:
-    - nb : int, number of rows
     - data : array, dataset of colors
-    - names : list, ['Red', 'Green', 'Blue']
     """
     dat1 = np.random.uniform(0,1,nb)
     dat2 = np.random.uniform(0,1,nb)
@@ -519,31 +689,17 @@ def dat_color(nb=25000, more_dim=0):
             data = np.vstack((data.T, dat3)).T
 
     names = ['Red', 'Green', 'Blue']
-    return nb, data, names
+    return data
 
-# random normalized colors
-def dat_color_norm(nb=25000):
+# random normalized uniform colors
+def dat_color_norm(nb=40000):
     """
     Create a random uniform dataset of colors
 
     Optional params:
     - nb : int, number of rows (= number of colors)
-
-    Return:
-    - data : array, dataset of colors
     """
-    data=[]
-    for i in range(nb):
-        theta = np.random.uniform(np.pi)
-        phi = np.random.uniform(np.pi*2)
-
-        x = np.sin(theta)*np.cos(phi)
-        y = np.sin(theta)*np.sin(phi)
-        z = np.cos(theta)
-
-        data.append([x,y,z])
-
-    return np.abs(data)
+    return np.random.dirichlet(np.ones(3),size=(nb))
 
 #------------------------------------------------------------
 #---------------------- Catalog defs ------------------------
@@ -605,37 +761,30 @@ def mergeDict(dict1, dict2):
 #------------------------------------------------------------
 
 # histograms, cuts and normalizations on a catalog
-def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), density=False):
+def cut_normalize_view(catalog_values, catalog_name, normalize_rescale=True, hist_view=False, density=False):
     """
     Histograms, cuts and normalizations on a catalog
 
     Params:
-    -catalog : dict, "TU", "TU_fuse", "COSMOS" and the corresponding catalog
+    - catalog_values : dict, galaxy catalog
+    - catalog_name : str, catalog name between "TU" "TU_fuse" and "COSMOS"
 
     Optional params:
-    - init_view : bool, histograms of the catalog before normalizations
-    - norm_and_view : tuple, bool : norm
-                             bool : histograms  of the catalog after normalizations
+    - normalize_rescale : bool : normalize and rescale variables of the catalog
+    - hist_view : bool, histograms of the catalog before and after normalizations
     - density : bool, plt.hist() density function
 
     Return:
     - Datas : dict, catalog normalized or not
     """
-    if "TU" in catalog.keys() or "TU_fuse" in catalog.keys():
-        Datas = list(catalog.values())[0].copy()
-        print(list(catalog.keys())[0]+" catalog loaded \n")
+    if catalog_name not in ('TU', 'TU_fuse', 'COSMOS'):
+        raise ValueError("choose between 'TU', 'TU_fuse' and 'COSMOS' ; not " + catalog_name)
 
-    elif "COSMOS" in catalog.keys():
-        cat_cs = list(catalog.values())[0].copy()
-        Datas = {"mag" : cat_cs['mag_auto'],
-                "hlr" : cat_cs['sersicfit'][:,1],
-                "sersic" : cat_cs['sersicfit'][:,2],
-                "q" : cat_cs['sersicfit'][:,3]}
-        print("\nCOSMOS catalog loaded \n")
-    else:
-        raise ValueError("choose between -TU-, -TU_fuse- and -COSMOS- ; not " + list(catalog.keys())[0])
+    Datas = catalog_values.copy()
+    print(catalog_name + " catalog loaded \n")
 
-    if init_view:
+
+    if hist_view:
         plt.figure(figsize=(16,4))
         for i, vars in enumerate(Datas):
             plt.subplot(1,4,i+1)
@@ -645,10 +794,10 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         plt.show()
 
 
-    if norm_and_view[0]: # modifications in the catalog
+    if normalize_rescale: # modifications in the catalog
 
         # convert hlr
-        if "COSMOS" in catalog.keys():
+        if catalog_name=="COSMOS":
             Datas["hlr"] *= 0.03*np.sqrt(Datas["q"])
 
         # delete hlr problems
@@ -657,8 +806,8 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         for i in Datas:
             Datas[i] = np.delete(Datas[i], idx)
 
-        # delete sersic problems
-        if "COSMOS" in catalog.keys():
+        # delete sersic problems in COSMOS
+        if catalog_name=="COSMOS":
             idx_sup = np.where(Datas['sersic']>max(Datas['sersic'])-.001)[0]
             idx_inf = np.where(Datas['sersic']<min(Datas['sersic'])+.001)[0]
             print("sersic : nb d'elements suppr", idx_sup.shape[0]+idx_inf.shape[0])
@@ -672,7 +821,7 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         from sklearn.preprocessing import MinMaxScaler
         scaler = MinMaxScaler()
 
-        for i in Datas.keys():
+        for i in Datas:
             if i!="q" and i!="mag":
                 X = Datas[i].reshape(-1,1).copy()
                 scaler.fit(X)
@@ -683,7 +832,7 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         Datas["hlr"] = (Datas["hlr"]-0)/(.3-0)
 
         # final view
-        if norm_and_view[1]:
+        if hist_view:
             plt.figure(figsize=(16,4))
             for i, vars in enumerate(Datas):
                 plt.subplot(1,4,i+1)
@@ -716,11 +865,11 @@ def compare_CS_TU(cat1, cat2, norm=True):
         limits={"mag":[15,35],"hlr":[-.1,2],"sersic":[-.1,6.1],"q":[-.05,1.05]}
 
     plt.figure(figsize=(20,4))
-    for i, vars in enumerate(data_cs_):
+    for i, vars in enumerate(cat1):
         plt.subplot(1,4,i+1)
         plt.title(vars)
-        plt.hist(data_cs_[vars], bins=bins[vars], density=True, label="COSMOS")
-        plt.hist(data_tu_fuse_[vars], bins=bins[vars], density=True, label="TU", alpha=.7)
+        plt.hist(cat1[vars], bins=bins[vars], density=True, label="COSMOS")
+        plt.hist(cat2[vars], bins=bins[vars], density=True, label="TU", alpha=.7)
         plt.xlim(limits[vars])
     plt.legend()
     plt.show()
