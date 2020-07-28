@@ -611,7 +611,7 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
 #------------------------------------------------------------
 
 # random colors
-def dat_color(nb=25000, more_dim=0):
+def dat_color(nb=40000, more_dim=0):
     """
     Create a random dataset of colors
 
@@ -636,29 +636,15 @@ def dat_color(nb=25000, more_dim=0):
     names = ['Red', 'Green', 'Blue']
     return data
 
-# random normalized colors
-def dat_color_norm(nb=25000):
+# random normalized uniform colors
+def dat_color_norm(nb=40000):
     """
     Create a random uniform dataset of colors
 
     Optional params:
     - nb : int, number of rows (= number of colors)
-
-    Return:
-    - data : array, dataset of colors
     """
-    data=[]
-    for i in range(nb):
-        theta = np.random.uniform(np.pi)
-        phi = np.random.uniform(np.pi*2)
-
-        x = np.sin(theta)*np.cos(phi)
-        y = np.sin(theta)*np.sin(phi)
-        z = np.cos(theta)
-
-        data.append([x,y,z])
-
-    return np.abs(data)
+    return np.random.dirichlet(np.ones(3),size=(nb))
 
 #------------------------------------------------------------
 #---------------------- Catalog defs ------------------------
@@ -720,37 +706,30 @@ def mergeDict(dict1, dict2):
 #------------------------------------------------------------
 
 # histograms, cuts and normalizations on a catalog
-def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), density=False):
+def cut_normalize_view(catalog_values, catalog_name, normalize_rescale=True, hist_view=False, density=False):
     """
     Histograms, cuts and normalizations on a catalog
 
     Params:
-    -catalog : dict, "TU", "TU_fuse", "COSMOS" and the corresponding catalog
+    - catalog_values : dict, galaxy catalog
+    - catalog_name : str, catalog name between "TU" "TU_fuse" and "COSMOS"
 
     Optional params:
-    - init_view : bool, histograms of the catalog before normalizations
-    - norm_and_view : tuple, bool : norm
-                             bool : histograms  of the catalog after normalizations
+    - normalize_rescale : bool : normalize and rescale variables of the catalog
+    - hist_view : bool, histograms of the catalog before and after normalizations
     - density : bool, plt.hist() density function
 
     Return:
     - Datas : dict, catalog normalized or not
     """
-    if "TU" in catalog.keys() or "TU_fuse" in catalog.keys():
-        Datas = list(catalog.values())[0].copy()
-        print(list(catalog.keys())[0]+" catalog loaded \n")
+    if catalog_name not in ('TU', 'TU_fuse', 'COSMOS'):
+        raise ValueError("choose between 'TU', 'TU_fuse' and 'COSMOS' ; not " + catalog_name)
 
-    elif "COSMOS" in catalog.keys():
-        cat_cs = list(catalog.values())[0].copy()
-        Datas = {"mag" : cat_cs['mag_auto'],
-                "hlr" : cat_cs['sersicfit'][:,1],
-                "sersic" : cat_cs['sersicfit'][:,2],
-                "q" : cat_cs['sersicfit'][:,3]}
-        print("\nCOSMOS catalog loaded \n")
-    else:
-        raise ValueError("choose between -TU-, -TU_fuse- and -COSMOS- ; not " + list(catalog.keys())[0])
+    Datas = catalog_values.copy()
+    print(catalog_name + " catalog loaded \n")
 
-    if init_view:
+
+    if hist_view:
         plt.figure(figsize=(16,4))
         for i, vars in enumerate(Datas):
             plt.subplot(1,4,i+1)
@@ -760,10 +739,10 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         plt.show()
 
 
-    if norm_and_view[0]: # modifications in the catalog
+    if normalize_rescale: # modifications in the catalog
 
         # convert hlr
-        if "COSMOS" in catalog.keys():
+        if catalog_name=="COSMOS":
             Datas["hlr"] *= 0.03*np.sqrt(Datas["q"])
 
         # delete hlr problems
@@ -772,8 +751,8 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         for i in Datas:
             Datas[i] = np.delete(Datas[i], idx)
 
-        # delete sersic problems
-        if "COSMOS" in catalog.keys():
+        # delete sersic problems in COSMOS
+        if catalog_name=="COSMOS":
             idx_sup = np.where(Datas['sersic']>max(Datas['sersic'])-.001)[0]
             idx_inf = np.where(Datas['sersic']<min(Datas['sersic'])+.001)[0]
             print("sersic : nb d'elements suppr", idx_sup.shape[0]+idx_inf.shape[0])
@@ -787,7 +766,7 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         from sklearn.preprocessing import MinMaxScaler
         scaler = MinMaxScaler()
 
-        for i in Datas.keys():
+        for i in Datas:
             if i!="q" and i!="mag":
                 X = Datas[i].reshape(-1,1).copy()
                 scaler.fit(X)
@@ -798,7 +777,7 @@ def cut_normalize_view(catalog, init_view=True, norm_and_view=(True,True), densi
         Datas["hlr"] = (Datas["hlr"]-0)/(.3-0)
 
         # final view
-        if norm_and_view[1]:
+        if hist_view:
             plt.figure(figsize=(16,4))
             for i, vars in enumerate(Datas):
                 plt.subplot(1,4,i+1)
