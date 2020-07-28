@@ -297,7 +297,7 @@ def multi_sigma(nb_sigma, data):
 #------------------------------------------------------------
 
 # subplots
-def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_weigths=False):
+def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_weigths=False, colorbars=False):
     """
     Show the SOM, the distance map and the variables weights
 
@@ -308,6 +308,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
     - var_names : list, variable names
     - topology : str, -rectangular- or -hexagonal-
     - rescale_weigths : bool, in case the SOM is uninterpretable
+    - colorbars : bool, adding colorbars the the plots
     """
     weights = som.get_weights().copy()
     som_x, som_y, cols = weights.shape
@@ -325,10 +326,14 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
     if topology=='rectangular':
         # distance map
         ax1 = ax[0,1].imshow(som.distance_map())
+        if colorbars:
+            fig.colorbar(ax1, ax=ax[0,1])
 
         # variables plots
         for i in range(cols):
-            ax[1,i].imshow(weights[:,:,i])
+            axi = ax[1,i].imshow(weights[:,:,i])
+            if colorbars:
+                fig.colorbar(axi, ax=ax[1,i])
 
         if rescale_weigths and cols==4 and topology!='hexagonal':
             weights[:,:,-1] = weights[:,:,-1]*0+1
@@ -395,13 +400,16 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 
         # distance map
         pc1 = PatchCollection(patch_list1, match_original=True)
-        ax[0,1].add_collection(pc1)
+        ax1 = ax[0,1].add_collection(pc1)
+        if colorbars:
+            fig.colorbar(ax1, ax=ax[0,1])
 
         # each layer of the weights
         for i in range(cols):
             pci = PatchCollection(patch_listi[i], match_original=True)
-            ax[1,i].add_collection(pci)
-
+            axi = ax[1,i].add_collection(pci)
+            if colorbars:
+                fig.colorbar(axi, ax=ax[1,i])
 
         # limits and axis
         for i in range(2):
