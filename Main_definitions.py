@@ -425,7 +425,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 
     # titles
     ax[0,0].set_title('SOM '+str(som_x)+' x '+str(som_y))
-    ax[0,1].set_title('distance map ; mean = %.2f' % np.mean(som.distance_map()))
+    ax[0,1].set_title('distance map')
     for i in range(cols):
         try:
             ax[1,i].set_title(var_names[i])
@@ -459,7 +459,6 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
         fig, ax = plt.subplots(1,data.shape[1], figsize=(17,6))
         for i, cols in enumerate(data.T):
             ax[i].hist(cols, bins=100, color="black")
-            ax[i].set_title("variable " + str(i+1))
         plt.show()
 
 
@@ -596,14 +595,11 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
 # interactive SOM
 def _interactive_som(data, names, sigma, learning_rate, iterations, topology, size, info):
     """The function to which the interactive widgets are tied"""
-    som, wts = train_som(data,
-                         sigma = sigma,
-                         learning_rate = learning_rate,
-                         iterations = iterations,
-                         topology = topology,
-                         size=size)
+    som, wts = train_som(data, sigma, learning_rate, iterations,
+        topology, size)
 
-    PlotSOMs(som, names, topology=topology, rescale_weigths=False)
+    PlotSOMs(som, names, topology=topology,
+        rescale_weigths=False, colorbars=False)
 
     if info:
         print('quantization error :', som.quantization_error(data))
