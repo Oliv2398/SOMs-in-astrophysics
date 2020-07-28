@@ -702,6 +702,45 @@ def dat_color_norm(nb=40000):
     return np.random.dirichlet(np.ones(3),size=(nb))
 
 #------------------------------------------------------------
+
+# 3D plot of the weights in color
+def weights_3D(weights):
+    """
+    3D plot of the weights in color.
+
+    Params:
+    - weights : array, data to plot
+    """
+    if weights.ndim in (3,4):
+        som_x, som_y, cols = weights.shape
+        wr = weights.reshape(som_x * som_y, cols)
+    else:
+        wr = weights.copy()
+
+    from mpl_toolkits import mplot3d
+
+    fig = plt.figure(figsize = (10, 7))
+    ax = plt.axes(projection ="3d")
+    ax.scatter3D(wr[:,0], wr[:,1], wr[:, 2], c=wr)
+    ax.view_init(30, 20)
+    plt.show()
+
+# cut extrem values in a dataset
+def cut_extrem(data, inf=0.15, sup=0.8):
+    """
+    cut extrem values in a dataset.
+
+    Params:
+    - data : array, dataset
+
+    Optional params:
+    - inf : float, lower bound
+    - sup : float, upper bound
+    """
+    new_triangle = data[np.where((data[:, 0] < sup) & (data[:, 1] < sup) & (data[:, 2] < sup) & (data[:, 0] > inf) & (data[:, 1] > inf) & (data[:, 2] > inf))]
+    return new_triangle
+
+#------------------------------------------------------------
 #---------------------- Catalog defs ------------------------
 #------------------------------------------------------------
 
