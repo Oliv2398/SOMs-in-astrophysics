@@ -430,7 +430,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 #------------------------------------------------------------
 
 # heatmap
-def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default'):
+def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', return_ax=False):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -444,6 +444,7 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
     - hit_count : bool, number of hit in each cell
     - hist_vars : bool, histogram of the dataset's variables
     - figsize : tuple, size of the figure
+    - return_ax : bool, to return the fig and ax created
     """
 
     if hist_vars:
@@ -533,8 +534,12 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
         ax.set_aspect('equal')
         ax.axis('off')
 
-    plt.tight_layout()
-    plt.show()
+
+    if return_ax:
+        return fig, ax
+    else:
+        plt.tight_layout()
+        plt.show()
 
 #------------------------------------------------------------
 
