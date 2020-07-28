@@ -438,7 +438,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 #------------------------------------------------------------
 
 # heatmap
-def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', return_ax=False):
+def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', compare=None):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -452,7 +452,7 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
     - hit_count : bool, number of hit in each cell
     - hist_vars : bool, histogram of the dataset's variables
     - figsize : tuple, size of the figure
-    - return_ax : bool, to return the fig and ax created
+    - compare : array, to compare the heatmap with an array (could be a weight or other) of dimension 1
     """
 
     if hist_vars:
@@ -468,9 +468,16 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
 
     # size of the figure
     if figsize=='default':
-        fig, ax = plt.subplots(1,figsize=(14,14))
+        figsize=(14,14)
+    else:
+        pass
+
+    # subplots creation
+    if compare is not None:
+        fig, ax = plt.subplots(1,2,figsize=figsize)
     else:
         fig, ax = plt.subplots(1,figsize=figsize)
+
 
     from matplotlib.colors import LogNorm
 
@@ -484,7 +491,11 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
         else:
             norm = None
 
-        ax.imshow(activ_resp, norm = norm) ###
+        if compare is not None:
+            ax[0].imshow(activ_resp, norm = norm)
+            ax[1].imshow(compare)
+        else:
+            ax.imshow(activ_resp, norm = norm)
 
 
         if hit_count:
@@ -494,9 +505,14 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                 for j in range(som_y):
                     if activ_resp[i,j]!=0: # don't show inactivated cells
                         # i,j inverted in plt.text because of the minisom's coordinates problem
-                        ax.text(j, i, int(activ_resp[i,j]),
-                                horizontalalignment='center',
-                                verticalalignment='center')
+                        if compare is not None:
+                            ax[0].text(j, i, int(activ_resp[i,j]),
+                                    horizontalalignment='center',
+                                    verticalalignment='center')
+                        else:
+                            ax.text(j, i, int(activ_resp[i,j]),
+                                    horizontalalignment='center',
+                                    verticalalignment='center')
 
     # hexagonal imshow
     #------------------------------------
@@ -529,25 +545,51 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                                 facecolor = c))
 
         pc = PatchCollection(patch_list, match_original=True)
-        ax.add_collection(pc)
+
+
+        if compare is not None:
+            ax[0].add_collection(pc)
+
+            compare2 = compare.copy()
+            compare2 =  compare2.flatten()
+            pixel_color0 = plt.cm.viridis(compare2)
+            patch_list1=[]
+            for c0,x,y in zip(pixel_color0, xx.flat, wy.flat):
+                patch_list1.append(RegularPolygon(xy = (x, y),
+                                                numVertices = 6,
+                                                radius = .95/np.sqrt(3)+.03,
+                                                facecolor = c0))
+            pc1 = PatchCollection(patch_list1, match_original=True)
+            ax[1].add_collection(pc1)
+        else:
+            ax.add_collection(pc)
 
         for i in range(som_x):
             for j in range(som_y):
-              if activ_resp[i,j]!=0 and hit_count:
-                    ax.text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
-                                    horizontalalignment='center',
-                                    verticalalignment='center')
+                if activ_resp[i,j]!=0 and hit_count:
+                    if compare is not None:
+                        ax[0].text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
+                                horizontalalignment='center',
+                                verticalalignment='center')
+                    else:
+                        ax.text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
+                                horizontalalignment='center',
+                                verticalalignment='center')
 
-        ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
-        ax.set_aspect('equal')
-        ax.axis('off')
+        if compare is not None:
+            ax[0].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax[1].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax[0].set_aspect('equal')
+            ax[1].set_aspect('equal')
+            ax[0].axis('off')
+            ax[1].axis('off')
+        else:
+            ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+            ax.set_aspect('equal')
+            ax.axis('off')
 
-
-    if return_ax:
-        return fig, ax
-    else:
-        plt.tight_layout()
-        plt.show()
+    plt.tight_layout()
+    plt.show()
 
 #------------------------------------------------------------
 
