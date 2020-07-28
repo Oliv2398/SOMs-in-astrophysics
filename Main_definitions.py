@@ -252,7 +252,7 @@ def plot_error(dict_vars):
 #------------------------------------------------------------
 
 # quantization and topographic error plots for different sigma
-def multi_sigma(nb_sigma, data):
+def multi_sigma_train(nb_sigma, data):
     """
     Quantization and topographic error plots for different sigma.
 
@@ -264,6 +264,7 @@ def multi_sigma(nb_sigma, data):
     - weights_multi : array, weigths from all the trainings
     - q_error : array, quantization error from all the trainings
     - t_error : array, topographic error from all the trainings
+    - sigma : array, all sigma used for the trainings
     """
     sigma = np.linspace(1.5,14,nb_sigma)
     learning_rate = 1
@@ -292,7 +293,36 @@ def multi_sigma(nb_sigma, data):
     plt.ylabel('topographic error')
     plt.show()
 
-    return weights_multi, q_error, t_error
+    return weights_multi, q_error, t_error, sigma
+
+# weights for different sigma
+def multi_sigma_plot(idx, weights_multi, q_error=None, t_error=None):
+    """
+    Params:
+    - idx : list, sigma_multi index
+    - weights_multi : array, weigths from all the trainings
+
+    Optional params:
+    - q_error : array, quantization error from all the trainings
+    - t_error : array, topographic error from all the trainings
+    """
+    if q_error is not None and t_error is not None and len(idx)<=5:
+        titles=True
+    elif len(idx)>5 and q_error is not None and t_error is not None:
+        print("cannot display errors due to lack of space, reduce -idx- elements")
+        titles=False
+    else:
+        titles=False
+
+    plt.figure(figsize=(15,8))
+    for i,j in enumerate(idx):
+        plt.subplot(1,len(idx),i+1)
+        plt.imshow(weights_multi[j])
+        if titles:
+            plt.title('q error=%.3f ; t_error=%.3f' % (q_error[j], t_error[j]))
+        plt.axis('off')
+    plt.tight_layout()
+    plt.show()
 
 #------------------------------------------------------------
 
