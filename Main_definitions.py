@@ -405,17 +405,13 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
         patch_list0 = [] ; patch_list1 = []
         patch_listi = [[] for i in range(cols)]
         for c0, c1, x, y in zip(pixel_color0, pixel_color1, xx.flat, wy.flat):
-            patch_list0.append(
-                    RegularPolygon(xy = (x, y),
-                                numVertices = 6,
-                                radius = .95/np.sqrt(3)+.03,
-                                facecolor = to_hex(c0)))
+            # distance map
             patch_list1.append(
                     RegularPolygon(xy = (x, y),
                                 numVertices = 6,
                                 radius = .95/np.sqrt(3)+.03,
                                 facecolor = c1))
-
+            # layers
             for idx, k in enumerate(c0):
                 fcolor = (k-np.min(weights[:,:,idx]))/(np.max(weights[:,:,idx])-np.min(weights[:,:,idx]))
                 patch_listi[idx].append(
@@ -423,6 +419,15 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
                                 numVertices = 6,
                                 radius = .95/np.sqrt(3)+.03,
                                 facecolor = plt.cm.viridis(fcolor)))
+
+            if len(c0)==2:
+                c0 = np.concatenate((c0,[0]))
+            # SOM
+            patch_list0.append(
+                    RegularPolygon(xy = (x, y),
+                                numVertices = 6,
+                                radius = .95/np.sqrt(3)+.03,
+                                facecolor = to_hex(c0)))
 
         # SOM
         pc0 = PatchCollection(patch_list0, match_original=True)
