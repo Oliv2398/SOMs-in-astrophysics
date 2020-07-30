@@ -5,6 +5,57 @@ from minisom import MiniSom
 
 from astropy.io import fits
 
+
+#------------------------------------------------------------
+
+# random colors
+def dat_color(nb=40000, more_dim=0):
+    """
+    Create a random dataset of colors
+
+    Optional params:
+    - nb : int, number of rows (= number of colors)
+    - more_dim : int, number of cols
+
+    Return:
+    - data : array, dataset of colors
+    """
+    dat1 = np.random.uniform(0,1,nb)
+    dat2 = np.random.uniform(0,1,nb)
+    dat3 = np.random.uniform(0,1,nb)
+
+    data = np.vstack((dat1,dat2,dat3)).T
+
+    if more_dim:
+        for i in range(3,more_dim):
+            np.random.shuffle(dat3)
+            data = np.vstack((data.T, dat3)).T
+
+    names = ['Red', 'Green', 'Blue']
+    return data
+
+# random normalized uniform colors
+def dat_color_norm(nb=40000):
+    """
+    Create a random uniform dataset of colors
+
+    Optional params:
+    - nb : int, number of rows (= number of colors)
+    """
+    return np.random.dirichlet(np.ones(3),size=(nb))
+
+# soft blue dataset
+def data_blue(nb=10000, loc_r=.2, loc_g=2., loc_b=.8, s_r=.04, s_g=.04, s_b=.05):
+    r = np.random.normal(loc_r,s_r,nb) # red
+    g = np.random.normal(loc_g,s_g,nb) # green
+    b = np.random.normal(loc_b,s_b,nb) # blue ----
+    rgb = np.vstack([r,g,b]).T
+
+    # normalize each row
+    sum_of_rows = rgb.sum(axis=1)
+    data = rgb / sum_of_rows[:, np.newaxis]
+    return data
+
 #------------------------------------------------------------
 
 # training
@@ -326,6 +377,18 @@ def multi_sigma_plot(idx, weights_multi, q_error=None, t_error=None):
 
 #------------------------------------------------------------
 
+# colorbar for subplots
+def _colorbars_perso(ax):
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    divider = make_axes_locatable(ax)
+
+    ax_cb = divider.new_horizontal(size="5%", pad=0.07)
+    fig = ax.get_figure()
+    fig.add_axes(ax_cb)
+
+    return ax_cb
+
 # subplots
 def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_weigths=False, colorbars=False):
     """
@@ -338,9 +401,10 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
     - var_names : list, variable names
     - topology : str, -rectangular- or -hexagonal-
     - rescale_weigths : bool, in case the SOM is uninterpretable
-    - colorbars : bool, adding colorbars the the plots
+    - colorbars : bool, adding colorbars the plots, only rectangular topology
     """
     weights = som.get_weights().copy()
+    weights2 = weights.copy()
     som_x, som_y, cols = weights.shape
 
     fig, ax = plt.subplots(nrows=2, ncols=cols, figsize=(14,9))
@@ -355,17 +419,20 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
     #------------------------------------
     if topology=='rectangular':
         # distance map
-        ax1 = ax[0,1].imshow(som.distance_map())
+        ax1 = ax[0,1].imshow(som.distance_map(), cmap='bone')
         if colorbars:
-            fig.colorbar(ax1, ax=ax[0,1])
+            ax_cb1 = _colorbars_perso(ax[0,1])
+            plt.colorbar(ax1, cax=ax_cb1)
 
         # variables plots
         for i in range(cols):
-            axi = ax[1,i].imshow(weights[:,:,i])
+            axi = ax[1,i].imshow(weights2[:,:,i])
             if colorbars:
-                fig.colorbar(axi, ax=ax[1,i])
+                ax_cbi = _colorbars_perso(ax[1,i])
+                plt.colorbar(axi, cax=ax_cbi)
 
-        if rescale_weigths and cols==4 and topology!='hexagonal':
+
+        if rescale_weigths and cols==4:
             weights[:,:,-1] = weights[:,:,-1]*0+1
 
         # SOMs
@@ -399,7 +466,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
         wre = weights.reshape(np.prod(weights.shape[:2]), cols)
         for i, j in zip(wre, umatrix): # colors
             pixel_color0.append(i)
-            pixel_color1.append(plt.cm.viridis(j))
+            pixel_color1.append(plt.cm.bone(j))
 
         # create patches
         patch_list0 = [] ; patch_list1 = []
@@ -436,15 +503,14 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
         # distance map
         pc1 = PatchCollection(patch_list1, match_original=True)
         ax1 = ax[0,1].add_collection(pc1)
-        if colorbars:
-            fig.colorbar(ax1, ax=ax[0,1])
 
         # each layer of the weights
         for i in range(cols):
             pci = PatchCollection(patch_listi[i], match_original=True)
             axi = ax[1,i].add_collection(pci)
             if colorbars:
-                fig.colorbar(axi, ax=ax[1,i])
+                ax_cbi = _colorbars_perso(ax[1,i])
+                plt.colorbar(axi, cax=ax_cbi)
 
         # limits and axis
         for i in range(2):
@@ -472,8 +538,8 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 
 #------------------------------------------------------------
 
-# heatmap
-def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', compare=None):
+# hitmap
+def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', fontsize=None, compare=None):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -487,7 +553,8 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
     - hit_count : bool, number of hit in each cell
     - hist_vars : bool, histogram of the dataset's variables
     - figsize : tuple, size of the figure
-    - compare : array, to compare the heatmap with an array (could be a weight or other) of dimension 1
+    - fontsize : int, size of the fonts (hit_count must be activated)
+    - compare : array, to compare the hitmap with an array (could be a weight or other) of dimension 1
     """
 
     if hist_vars:
@@ -542,11 +609,11 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                         if compare is not None:
                             ax[0].text(j, i, int(activ_resp[i,j]),
                                     horizontalalignment='center',
-                                    verticalalignment='center')
+                                    verticalalignment='center', fontsize=fontsize)
                         else:
                             ax.text(j, i, int(activ_resp[i,j]),
                                     horizontalalignment='center',
-                                    verticalalignment='center')
+                                    verticalalignment='center', fontsize=fontsize)
 
     # hexagonal imshow
     #------------------------------------
@@ -586,6 +653,7 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
 
             compare2 = compare.copy()
             compare2 =  compare2.flatten()
+            compare2 = (compare2 - np.min(compare2))/(np.max(compare2) - np.min(compare2))
             pixel_color0 = plt.cm.viridis(compare2)
             patch_list1=[]
             for c0,x,y in zip(pixel_color0, xx.flat, wy.flat):
@@ -604,11 +672,11 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
                     if compare is not None:
                         ax[0].text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
                                 horizontalalignment='center',
-                                verticalalignment='center')
+                                verticalalignment='center', fontsize=fontsize)
                     else:
                         ax.text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
                                 horizontalalignment='center',
-                                verticalalignment='center')
+                                verticalalignment='center', fontsize=fontsize)
 
         if compare is not None:
             ax[0].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
@@ -621,6 +689,80 @@ def Heatmap(som, data, topology="rectangular", normed=True, hit_count=True, hist
             ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
             ax.set_aspect('equal')
             ax.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+def _Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
+    """
+    Special use, hexagonal compare weights
+    """
+
+    activ_resp = som.activation_response(data)
+
+    fig, ax = plt.subplots(1,2, figsize=(14,14))
+
+    from matplotlib.colors import LogNorm
+
+
+    from matplotlib.patches import RegularPolygon
+    from matplotlib.collections import PatchCollection
+
+    lognorm = LogNorm(1,np.max(activ_resp))
+
+    xx, yy = som.get_euclidean_coordinates()
+    wy = yy*np.sqrt(3)/2
+
+    som_x, som_y, cols = som.get_weights().shape
+
+    fcolor=[]
+    for z in activ_resp.flatten():
+        if z!=0:
+            fcolor.append(plt.cm.viridis(lognorm(z)))
+        elif z==0:
+            fcolor.append([1,1,1,1])
+        else:
+            fcolor.append(plt.cm.viridis(z))
+
+    patch_list = []
+    for c, x, y in zip(fcolor, xx.flat, wy.flat):
+        patch_list.append(
+                RegularPolygon(xy = (x, y),
+                            numVertices = 6,
+                            radius = .95/np.sqrt(3)+.03,
+                            facecolor = c))
+
+    compare2 = compare.copy()
+    wre = compare2.reshape(som_x*som_y, cols)
+    pixel_color0 = wre.copy()
+
+    patch_list1=[]
+    for c0,x,y in zip(pixel_color0, xx.flat, wy.flat):
+        patch_list1.append(RegularPolygon(xy = (x, y),
+                                        numVertices = 6,
+                                        radius = .95/np.sqrt(3)+.03,
+                                        facecolor = c0))
+
+    pc = PatchCollection(patch_list, match_original=True)
+    ax[0].add_collection(pc)
+
+    pc1 = PatchCollection(patch_list1, match_original=True)
+    ax[1].add_collection(pc1)
+
+
+    for i in range(som_x):
+        for j in range(som_y):
+            if activ_resp[i,j]!=0 and hit_count:
+                ax[0].text(xx[i, j], wy[i,j], int(activ_resp[i,j]),
+                        horizontalalignment='center',
+                        verticalalignment='center', fontsize=fontsize)
+
+    ax[0].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+    ax[1].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
+    ax[0].set_aspect('equal')
+    ax[1].set_aspect('equal')
+    ax[0].axis('off')
+    ax[1].axis('off')
 
     plt.tight_layout()
     plt.show()
@@ -693,44 +835,6 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
                            size = fixed(size),
                            info = fixed(infos))
     return interact
-
-#------------------------------------------------------------
-
-# random colors
-def dat_color(nb=40000, more_dim=0):
-    """
-    Create a random dataset of colors
-
-    Optional params:
-    - nb : int, number of rows (= number of colors)
-    - more_dim : int, number of cols
-
-    Return:
-    - data : array, dataset of colors
-    """
-    dat1 = np.random.uniform(0,1,nb)
-    dat2 = np.random.uniform(0,1,nb)
-    dat3 = np.random.uniform(0,1,nb)
-
-    data = np.vstack((dat1,dat2,dat3)).T
-
-    if more_dim:
-        for i in range(3,more_dim):
-            np.random.shuffle(dat3)
-            data = np.vstack((data.T, dat3)).T
-
-    names = ['Red', 'Green', 'Blue']
-    return data
-
-# random normalized uniform colors
-def dat_color_norm(nb=40000):
-    """
-    Create a random uniform dataset of colors
-
-    Optional params:
-    - nb : int, number of rows (= number of colors)
-    """
-    return np.random.dirichlet(np.ones(3),size=(nb))
 
 #------------------------------------------------------------
 
@@ -941,7 +1045,8 @@ def compare_CS_TU(cat1, cat2, norm=True):
         plt.hist(cat1[vars], bins=bins[vars], density=True, label="COSMOS")
         plt.hist(cat2[vars], bins=bins[vars], density=True, label="TU", alpha=.7)
         plt.xlim(limits[vars])
-    plt.legend()
+        if i==0:
+            plt.legend()
     plt.show()
 
 #------------------------------------------------------------
@@ -991,5 +1096,44 @@ def check_vars(data):
     display(ui, out)
 
     return selected_data, selected_vars
+
+#------------------------------------------------------------
+
+# check gx properties near mag 25.2
+def _get_loc(som, cat, loc):
+    get_idx=[]
+    for i,j in enumerate(cat):
+        idx = np.argwhere(som.activation_response([j]))[0]
+        if sum(idx==loc)==2:
+            get_idx.append(i)
+    return get_idx
+#get_loc(som_tu, choice_cs, [0,0])
+
+def _act_show(som, point, data, markersize=20):
+    from matplotlib.colors import LogNorm
+
+    act_point = np.argwhere(som.activation_response(point))[0]
+    print(act_point)
+
+    activ_resp = som.activation_response(data)
+
+    plt.figure(figsize=(7,7))
+    plt.imshow(activ_resp, norm=LogNorm())
+    plt.scatter(x=act_point[1], y=act_point[0], s=markersize, c='r')
+    plt.show()
+#act_show(som_tu2, [choice_cs[1308]], choice_cs, markersize=30)
+
+def _check_hist_pos(dat, cat):
+    plt.figure(figsize=(18,4))
+    for i, vars in enumerate(cat):
+        plt.subplot(1,4,i+1)
+        plt.title(vars + ' = %.2f' % dat[i])
+        plt.axvline(dat[i], color='k')
+        plt.hist(cat[vars], bins=200, density=True)
+        if vars=="hlr":
+            plt.xlim(-.1,1.1)
+    plt.tight_layout()
+    plt.show()
+#check_hist_pos(choice_cs[1308], data_cs_)
 
 #------------------------------------------------------------
