@@ -2,9 +2,6 @@
 
 
 
-
-Première approche avec les SOMs
-
 Utilisation du package [minisom](https://github.com/JustGlowing/minisom) 
 
 
