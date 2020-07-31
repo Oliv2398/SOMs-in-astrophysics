@@ -171,7 +171,7 @@ try :
                     dict_vars["t_error"].append(t_error)
 
                 dict_vars["iter_x"].append(i)
-                dict_vars["mapmean"].append(np.mean(som.distance_map()))
+                dict_vars["mapmean"].append(np.mean(som.distance_map_perso()))
                 dict_vars["sigma"].append(sigma_i)
                 dict_vars["learning_rate"].append(learning_rate_i)
 
@@ -185,7 +185,7 @@ try :
                     ax[0].set_title('sigma %.2f' % sigma_i)
                     ax[0].axis('off')
                     ax[1].imshow(som.distance_map())
-                    ax[1].set_title('distance map ; mean = %.2f' % np.mean(som.distance_map()))
+                    ax[1].set_title('distance map')
                     ax[1].axis('off')
 
                     if sig_view:
@@ -264,7 +264,7 @@ except:
                     ax[0].imshow(som.get_weights())
                     ax[0].axis('off')
                     ax[1].imshow(som.distance_map())
-                    ax[1].set_title('distance map ; mean = %.2f' % dict_vars["mapmean"][-1])
+                    ax[1].set_title('distance map')
                     ax[1].axis('off')
 
                     plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
@@ -1100,28 +1100,56 @@ def check_vars(data):
 #------------------------------------------------------------
 
 # check gx properties near mag 25.2
-def _get_loc(som, cat, loc):
+
+def _get_loc(som, data, voisins_nb=8, activ_2_val=0):
+    activ_resp = som.activation_response(data)
+    som_x, som_y = activ_resp.shape
+
+    activ_1_loc = np.argwhere(activ_resp==1)
+    activ_2_loc = np.argwhere(activ_resp==activ_2_val)
+
+    if voisins_nb==4:
+        voisins=[[+1,0],[-1,0],
+                  [0,-1],[0,+1]]
+    elif voisins_nb==8:
+        voisins=[[+1,-1],[+1,0],[+1,+1],
+                [0,-1],[0,+1],
+                [-1,-1],[-1,0],[-1,+1]]
+    else:
+        raise ValueError("voisins should be 4 or 8 not "+str(voisins_nb))
+
+    tab=[]
+    for act1 in activ_1_loc[:len(activ_2_loc)]:
+        for act2 in activ_2_loc:
+            for vois in voisins:
+
+                if (act1[0]+vois[0]==act2[0] and act1[1]+vois[1]==act2[1]
+                    and act1[0]!=0 and act1[0]!=som_x and act1[1]!=0 and act1[1]!=som_x):
+
+                    tab.append(act1)
+
+    assert len(tab)>0, "can't find a corresponding element"
+
+    rng = np.random.default_rng()
+    return rng.choice(tab)
+
+def _get_idx(som, cat, loc):
     get_idx=[]
     for i,j in enumerate(cat):
         idx = np.argwhere(som.activation_response([j]))[0]
         if sum(idx==loc)==2:
             get_idx.append(i)
     return get_idx
-#get_loc(som_tu, choice_cs, [0,0])
 
-def _act_show(som, point, data, markersize=20):
+def _act_show(som, point, data, markersize=30):
     from matplotlib.colors import LogNorm
-
-    act_point = np.argwhere(som.activation_response(point))[0]
-    print(act_point)
 
     activ_resp = som.activation_response(data)
 
     plt.figure(figsize=(7,7))
     plt.imshow(activ_resp, norm=LogNorm())
-    plt.scatter(x=act_point[1], y=act_point[0], s=markersize, c='r')
+    plt.scatter(x=point[1], y=point[0], s=markersize, c='r')
     plt.show()
-#act_show(som_tu2, [choice_cs[1308]], choice_cs, markersize=30)
 
 def _check_hist_pos(dat, cat):
     plt.figure(figsize=(18,4))
@@ -1134,6 +1162,11 @@ def _check_hist_pos(dat, cat):
             plt.xlim(-.1,1.1)
     plt.tight_layout()
     plt.show()
-#check_hist_pos(choice_cs[1308], data_cs_)
+
+#point = _get_loc(som_tu2, choice_cs, voisins_nb=8, activ_2_val=0)
+#_act_show(som_tu2, point, choice_cs)
+
+#idx = _get_idx(som_tu2, choice_cs, point)[0]
+#_check_hist_pos(choice_cs[idx], data_cs_)
 
 #------------------------------------------------------------
