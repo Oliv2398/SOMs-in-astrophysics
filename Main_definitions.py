@@ -45,7 +45,7 @@ def dat_color_norm(nb=40000):
     return np.random.dirichlet(np.ones(3),size=(nb))
 
 # soft blue dataset
-def data_blue(nb=10000, loc_r=.2, loc_g=2., loc_b=.8, s_r=.04, s_g=.04, s_b=.05):
+def data_blue(nb=10000, loc_r=.2, loc_g=.2, loc_b=.7, s_r=.04, s_g=.04, s_b=.05):
     r = np.random.normal(loc_r,s_r,nb) # red
     g = np.random.normal(loc_g,s_g,nb) # green
     b = np.random.normal(loc_b,s_b,nb) # blue ----
@@ -332,48 +332,43 @@ def multi_sigma_train(nb_sigma, data):
         t_error[i] = som.topographic_error(data)
         print("\r",i+1, "/", nb_sigma, end='')
 
-    plt.figure(figsize=(12,4))
-    plt.subplot(121)
-    plt.plot(sigma, q_error)
-    plt.xlabel('sigma')
-    plt.ylabel('quantization error')
-
-    plt.subplot(122)
-    plt.plot(sigma, t_error)
-    plt.xlabel('sigma')
-    plt.ylabel('topographic error')
-    plt.show()
-
     return weights_multi, q_error, t_error, sigma
 
 # weights for different sigma
-def multi_sigma_plot(idx, weights_multi, q_error=None, t_error=None):
+def multi_sigma_plot(weights_multi, q_error, t_error, sigma_multi, choice='errors', idx=[0,-1]):
     """
     Params:
-    - idx : list, sigma_multi index
     - weights_multi : array, weigths from all the trainings
-
-    Optional params:
     - q_error : array, quantization error from all the trainings
     - t_error : array, topographic error from all the trainings
-    """
-    if q_error is not None and t_error is not None and len(idx)<=5:
-        titles=True
-    elif len(idx)>5 and q_error is not None and t_error is not None:
-        print("cannot display errors due to lack of space, reduce -idx- elements")
-        titles=False
-    else:
-        titles=False
+    - choice : str or list, "errors", "sigmas" or both
 
-    plt.figure(figsize=(15,8))
-    for i,j in enumerate(idx):
-        plt.subplot(1,len(idx),i+1)
-        plt.imshow(weights_multi[j])
-        if titles:
+    Optional params:
+    - idx : list, sigma_multi index
+    """
+
+    if 'errors' in choice:
+        plt.figure(figsize=(12,4))
+        plt.subplot(121)
+        plt.plot(sigma_multi, q_error, 'xk')
+        plt.xlabel('sigma')
+        plt.ylabel('quantization error')
+
+        plt.subplot(122)
+        plt.plot(sigma_multi, t_error, 'xk')
+        plt.xlabel('sigma')
+        plt.ylabel('topographic error')
+        plt.show()
+
+    if 'sigmas' in choice:
+        plt.figure(figsize=(12,6))
+        for i,j in enumerate(idx):
+            plt.subplot(1,len(idx),i+1)
+            plt.imshow(weights_multi[j])
             plt.title('q error=%.3f ; t_error=%.3f' % (q_error[j], t_error[j]))
-        plt.axis('off')
-    plt.tight_layout()
-    plt.show()
+            plt.axis('off')
+        plt.tight_layout()
+        plt.show()
 
 #------------------------------------------------------------
 
@@ -785,7 +780,7 @@ def _interactive_som(data, names, sigma, learning_rate, iterations, topology, si
 
 def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
     """
-    Interactive SOM, the sigma, learning rate and iterations can be changed by sliders
+    Interactive SOM, the sigma, learning rate and iterations can be changed by sliders and the topology by a button.
 
     Params:
     - data : array, training dataset
@@ -880,144 +875,141 @@ def cut_extrem(data, inf=0.15, sup=0.8):
 #------------------------------------------------------------
 
 # loading fits file
-def load_cat(path):
+def load_cat(path, cat_name):
     """
     Load galaxy catalogs from fits file
 
     Params:
     - path : str, path and name of the file
+    - cat_name : str, 'CS' for COSMOS or 'TU' for True Universe
 
     Return:
-    - cat : astropy.io.fits, catalog
+    - data_ex : dict, catalog
     """
     with fits.open(path) as hdul:
         cat = hdul[1].data
-    return cat
 
-# turning TU catalog into dict
-def extract_tu(data):
-    """
-    TU fits catalog into dict
+    if cat_name=='CS':
+        data_ex = {"mag" : cat['mag_auto'],
+                    "hlr" : cat['sersicfit'][:,1],
+                    "sersic" : cat['sersicfit'][:,2],
+                    "q" : cat['sersicfit'][:,3]}
+    if cat_name=='TU':
+        data_ex = {"mag" : cat['mag'],
+                "hlr" : cat['half_light_radius'],
+                "sersic" : cat['SSersic_n'],
+                "q" : cat['q']}
 
-    Params:
-    - data : astropy.io.fits, catalog
+    if cat_name not in ('CS','TU'):
+        raise ValueError("Choose between 'CS' and 'TU' catalog")
 
-    Return:
-    - datas : dict, catalog with "mag", "hlr", "sersic", "q"
-    """
-
-    cat_tu = data.copy()
-    datas = {"mag" : cat_tu['mag'],
-            "hlr" : cat_tu['half_light_radius'],
-            "sersic" : cat_tu['SSersic_n'],
-            "q" : cat_tu['q']}
-    return datas
+    return data_ex
 
 # merge dict and keep values of common keys in list
-def mergeDict(dict1, dict2):
+def mergeDict(list_dicts):
     """
-    Merge two dict and keep values of common keys in list
+    Merge all TU dictionaries
 
     Params:
-    - dict1 : dict, first dict to merge
-    - dict2 : dict, second dict to merge
+    - list_dicts : list, list of all TU dict
 
     Return:
-    - dict3 : dict, dict merge
+    - dict_fuse : dict, dict merge
     """
+    dict_fuse = list_dicts[0].copy()
+    for key, value in dict_fuse.items():
+        dict_fuse[key] = np.concatenate([list_dicts[i][key] for i in range(len(list_dicts))])
 
-    dict3 = {**dict1, **dict2}
-    for key, value in dict3.items():
-        if key in dict1 and key in dict2:
-            dict3[key] = np.concatenate([ value , dict1[key] ])
-    return dict3
+    return dict_fuse
 
 #------------------------------------------------------------
 
-# histograms, cuts and normalizations on a catalog
-def cut_normalize_view(catalog_values, catalog_name, normalize_rescale=True, hist_view=False, density=False):
+# remove hlr and sersic issues
+def delete_issues(cat_cs_init, cat_tu_init, infos=False):
     """
-    Histograms, cuts and normalizations on a catalog
+    Remove hlr and sersic issues.
 
     Params:
-    - catalog_values : dict, galaxy catalog
-    - catalog_name : str, catalog name between "TU" "TU_fuse" and "COSMOS"
+    - cat_cs_init : dict, COSMOS dict
+    - cat_tu_init : dict, True Universe dict
 
     Optional params:
-    - normalize_rescale : bool : normalize and rescale variables of the catalog
-    - hist_view : bool, histograms of the catalog before and after normalizations
-    - density : bool, plt.hist() density function
+    - infos : bool, print the number of deleted elements
 
     Return:
-    - Datas : dict, catalog normalized or not
+    The two dict.
     """
-    if catalog_name not in ('TU', 'TU_fuse', 'COSMOS'):
-        raise ValueError("choose between 'TU', 'TU_fuse' and 'COSMOS' ; not " + catalog_name)
+    cat_cs = cat_cs_init.copy()
+    cat_tu = cat_tu_init.copy()
 
-    Datas = catalog_values.copy()
-    print(catalog_name + " catalog loaded \n")
+    # CS hlr convert
+    cat_cs["hlr"] *= 0.03*np.sqrt(cat_cs["q"])
 
+    # delete hlr issues in CS
+    idx = np.where(cat_cs['hlr']>10)[0]
+    if infos:
+        print("hlr CS : nb d'elements suppr", idx.shape[0])
+    for i in cat_cs:
+        cat_cs[i] = np.delete(cat_cs[i], idx)
 
-    if hist_view:
-        plt.figure(figsize=(16,4))
-        for i, vars in enumerate(Datas):
-            plt.subplot(1,4,i+1)
-            plt.title(vars +' ; min=%.2f, max=%.2f\n' % (min(Datas[vars]), max(Datas[vars])))
-            plt.hist(Datas[vars], bins=100, density=density)
-        plt.tight_layout()
-        plt.show()
+    # delete sersic issues in CS
+    idx_sup = np.where(cat_cs['sersic']>max(cat_cs['sersic'])-.001)[0]
+    idx_inf = np.where(cat_cs['sersic']<min(cat_cs['sersic'])+.001)[0]
+    if infos:
+        print("sersic CS : nb d'elements suppr", idx_sup.shape[0]+idx_inf.shape[0])
+    for i in cat_cs:
+        cat_cs[i] = np.delete(cat_cs[i],np.hstack([idx_sup,idx_inf]))
 
+    # delete hlr issues in TU
+    idx = np.where(cat_tu['hlr']>10)[0]
+    if infos:
+        print("hlr TU : nb d'elements suppr", idx.shape[0])
+    for i in cat_tu:
+        cat_tu[i] = np.delete(cat_tu[i], idx)
 
-    if normalize_rescale: # modifications in the catalog
+    return cat_cs, cat_tu
 
-        # convert hlr
-        if catalog_name=="COSMOS":
-            Datas["hlr"] *= 0.03*np.sqrt(Datas["q"])
+# rescale the variables of the catalogs
+def rescale_cats(cat_cs_init, cat_tu_init):
+    """
+    Rescale/normalize distributions.
 
-        # delete hlr problems
-        idx = np.where(Datas['hlr']>10)[0]
-        print("hlr : nb d'elements suppr", idx.shape[0])
-        for i in Datas:
-            Datas[i] = np.delete(Datas[i], idx)
+    Params:
+    - cat_cs_init : dict, COSMOS dict
+    - cat_tu_init : dict, True Universe dict
 
-        # delete sersic problems in COSMOS
-        if catalog_name=="COSMOS":
-            idx_sup = np.where(Datas['sersic']>max(Datas['sersic'])-.001)[0]
-            idx_inf = np.where(Datas['sersic']<min(Datas['sersic'])+.001)[0]
-            print("sersic : nb d'elements suppr", idx_sup.shape[0]+idx_inf.shape[0])
-            for i in Datas:
-                Datas[i] = np.delete(Datas[i],np.hstack([idx_sup,idx_inf]))
+    Return:
+    The two dict.
+    """
+    cat_cs = cat_cs_init.copy()
+    cat_tu = cat_tu_init.copy()
 
-        # normalize mag
-        Datas['mag'] /= 35
+    # normalize mag
+    cat_cs['mag'] /= 35
+    cat_tu['mag'] /= 35
 
-        # rescale hlr sersic
-        from sklearn.preprocessing import MinMaxScaler
-        scaler = MinMaxScaler()
+    # rescale hlr - sersic
+    from sklearn.preprocessing import MinMaxScaler
+    scaler = MinMaxScaler()
+    for i in cat_cs:
+        if i!="q" and i!="mag":
+            # CS rescale
+            X = cat_cs[i].reshape(-1,1).copy()
+            scaler.fit(X)
+            cat_cs[i] = scaler.transform(X)
+            cat_cs[i] = cat_cs[i].flatten()
 
-        for i in Datas:
-            if i!="q" and i!="mag":
-                X = Datas[i].reshape(-1,1).copy()
-                scaler.fit(X)
-                Datas[i] = scaler.transform(X)
-                Datas[i] = Datas[i].flatten()
+            # TU rescale
+            Y = cat_tu[i].reshape(-1,1).copy()
+            scaler.fit(Y)
+            cat_tu[i] = scaler.transform(Y)
+            cat_tu[i] = cat_tu[i].flatten()
 
-        # rescale hlr
-        Datas["hlr"] = (Datas["hlr"]-0)/(.3-0)
+    # rescale hlr
+    cat_cs["hlr"] = (cat_cs["hlr"]-0)/(.3-0)
+    cat_tu["hlr"] = (cat_tu["hlr"]-0)/(.3-0)
 
-        # final view
-        if hist_view:
-            plt.figure(figsize=(16,4))
-            for i, vars in enumerate(Datas):
-                plt.subplot(1,4,i+1)
-                plt.title(vars +' ; min=%.2f, max=%.2f\n' % (min(Datas[vars]), max(Datas[vars])))
-                plt.hist(Datas[vars], bins=200, density=density)
-                plt.xlim(-.1,1.1)
-            plt.tight_layout()
-            plt.show()
-
-    print("--------------------------\n\n")
-    return Datas
+    return cat_cs, cat_tu
 
 # compare COSMOS and TU histograms
 def compare_CS_TU(cat1, cat2, norm=True):
@@ -1028,7 +1020,7 @@ def compare_CS_TU(cat1, cat2, norm=True):
     - cat1 : dict, first catalog
     - cat2 : dict, second catalog
 
-    Optionnal params:
+    Optional params:
     - norm : bool, if the catalogs are normed or not
     """
 
@@ -1052,12 +1044,13 @@ def compare_CS_TU(cat1, cat2, norm=True):
 #------------------------------------------------------------
 
 # checkbox for variables selection
-def check_vars(data):
+def check_vars(cat_cs, cat_tu):
     """
-    Return variables of a catalog after selection
+    Return catalogs after variables selection.
 
     Params:
-    - data : dict, catalog of galaxies
+    - cat_cs : dict, COSMOS catalog
+    - cat_tu : dict, TU catalog
 
     Return:
     - selected_data : list, array of variables from the selection
@@ -1067,7 +1060,7 @@ def check_vars(data):
 
     names = []
     checkbox_objects = []
-    for key in data:
+    for key in cat_cs:
         checkbox_objects.append(Checkbox(value=False, description=key))
         names.append(key)
 
@@ -1075,27 +1068,29 @@ def check_vars(data):
 
     ui = VBox(children=checkbox_objects)
 
-    selected_data = []
+    select_cs = []
+    select_tu = []
     selected_vars = []
     def select_data(**kwargs):
-        selected_data.clear()
+        select_cs.clear()
+        select_tu.clear()
         selected_vars.clear()
 
         for key in kwargs:
             if kwargs[key] is True:
-                selected_data.append(data[key])
+                select_cs.append(cat_cs[key])
+                select_tu.append(cat_tu[key])
                 selected_vars.append(key)
         try:
-            print("\nNumber of rows :",len(selected_data[0]))
-            print("Variables :",selected_vars)
+            print("Selected variables :",selected_vars)
         except:
             pass
-        return  selected_data, selected_vars
+        return  select_cs, select_tu, selected_vars
 
     out = interactive_output(select_data, arg_dict)
     display(ui, out)
 
-    return selected_data, selected_vars
+    return select_cs, select_tu, selected_vars
 
 #------------------------------------------------------------
 
@@ -1141,17 +1136,23 @@ def _get_idx(som, cat, loc):
             get_idx.append(i)
     return get_idx
 
-def _act_show(som, point, data, markersize=30):
+def _act_show(som, point, data, figsize=(7,7), markersize=30):
     from matplotlib.colors import LogNorm
 
     activ_resp = som.activation_response(data)
 
-    plt.figure(figsize=(7,7))
+    plt.figure(figsize=figsize)
     plt.imshow(activ_resp, norm=LogNorm())
     plt.scatter(x=point[1], y=point[0], s=markersize, c='r')
     plt.show()
 
 def _check_hist_pos(dat, cat):
+    cat["mag"]*=35
+    dat[0]*=35
+
+    cat["sersic"]*=6
+    dat[2]*=6
+
     plt.figure(figsize=(18,4))
     for i, vars in enumerate(cat):
         plt.subplot(1,4,i+1)
