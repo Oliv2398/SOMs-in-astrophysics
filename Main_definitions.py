@@ -3,8 +3,31 @@ import matplotlib.pyplot as plt
 
 from minisom import MiniSom
 
+"""
+# All package used :
+
+from matplotlib.colors import LogNorm
+from matplotlib.colors import to_hex
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.patches import RegularPolygon
+from matplotlib.collections import PatchCollection
+from mpl_toolkits import mplot3d
+
+from ipywidgets import (interactive,
+    IntSlider, FloatSlider, RadioButtons, fixed, Layout,
+    Checkbox, VBox, interactive_output)
+
+from IPython.display import clear_output
+
 from astropy.io import fits
 
+from sklearn.preprocessing import MinMaxScaler
+
+
+# Special:
+
+from som_package.minisom_perso.minisom_perso import MiniSom_perso
+"""
 
 #------------------------------------------------------------
 
@@ -16,9 +39,6 @@ def dat_color(nb=40000, more_dim=0):
     Optional params:
     - nb : int, number of rows (= number of colors)
     - more_dim : int, number of cols
-
-    Return:
-    - data : array, dataset of colors
     """
     dat1 = np.random.uniform(0,1,nb)
     dat2 = np.random.uniform(0,1,nb)
@@ -46,6 +66,14 @@ def dat_color_norm(nb=40000):
 
 # soft blue dataset
 def data_blue(nb=10000, loc_r=.2, loc_g=.2, loc_b=.7, s_r=.04, s_g=.04, s_b=.05):
+    """
+    Create a blue dataset
+
+    Optinal params:
+    - nb : int, number of rows (= number of colors)
+    - loc_r, loc_g, loc_b : floats, mean of the red, green and blue distribution
+    - s_r, s_g, s_b : floats, standard deviation of the red, green and blue distribution
+    """
     r = np.random.normal(loc_r,s_r,nb) # red
     g = np.random.normal(loc_g,s_g,nb) # green
     b = np.random.normal(loc_b,s_b,nb) # blue ----
@@ -220,8 +248,7 @@ except:
         - dict_vars : dict,
             iterations,
             quantization error for the training dataset,
-            topological error if -topological_error- is activated,
-            mean of the distance map (U-matrix),
+            topological error if -topological_error- is activated
         """
         rows, cols = data.shape
         som_x = int(np.sqrt(5*np.sqrt(rows)))
@@ -231,8 +258,7 @@ except:
         som.random_weights_init(data)
 
         dict_vars ={"iter_x":[],
-                    "q_error":[],
-                    "mapmean":[]}
+                    "q_error":[]}
 
         if topological_error:
             dict_vars["t_error"]=[]
@@ -249,7 +275,6 @@ except:
                 dict_vars["iter_x"].append(i)
                 q_error = som.quantization_error(data)
                 dict_vars["q_error"].append(q_error)
-                dict_vars["mapmean"].append(np.mean(som.distance_map()))
 
                 if topological_error:
                     t_error = som.topographic_error(data)
@@ -294,9 +319,10 @@ def plot_error(dict_vars):
             ax[1].plot(dict_vars["iter_x"], dict_vars["learning_rate"])
             ax[1].set_ylabel('learning rate')
 
-        plt.figure(figsize=(10,4))
-        plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
-        plt.ylabel('mean of the distance map')
+        if "mapmean" in dict_vars=
+            plt.figure(figsize=(10,4))
+            plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
+            plt.ylabel('mean of the distance map')
 
         plt.show()
 
@@ -377,11 +403,9 @@ def _colorbars_perso(ax):
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     divider = make_axes_locatable(ax)
-
     ax_cb = divider.new_horizontal(size="5%", pad=0.07)
     fig = ax.get_figure()
     fig.add_axes(ax_cb)
-
     return ax_cb
 
 # subplots
@@ -390,7 +414,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
     Show the SOM, the distance map and the variables weights
 
     Params:
-    - som, MiniSom, trained SOM
+    - som : MiniSom, trained SOM
 
     Optional params:
     - var_names : list, variable names
@@ -688,7 +712,7 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_
     plt.tight_layout()
     plt.show()
 
-def _Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
+def Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
     """
     Special use, hexagonal compare weights
     """
@@ -698,8 +722,6 @@ def _Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
     fig, ax = plt.subplots(1,2, figsize=(14,14))
 
     from matplotlib.colors import LogNorm
-
-
     from matplotlib.patches import RegularPolygon
     from matplotlib.collections import PatchCollection
 
@@ -886,6 +908,11 @@ def load_cat(path, cat_name):
     Return:
     - data_ex : dict, catalog
     """
+    if cat_name not in ('CS','TU'):
+        raise ValueError("Choose between 'CS' and 'TU' catalog")
+
+    from astropy.io import fits
+
     with fits.open(path) as hdul:
         cat = hdul[1].data
 
@@ -899,10 +926,6 @@ def load_cat(path, cat_name):
                 "hlr" : cat['half_light_radius'],
                 "sersic" : cat['SSersic_n'],
                 "q" : cat['q']}
-
-    if cat_name not in ('CS','TU'):
-        raise ValueError("Choose between 'CS' and 'TU' catalog")
-
     return data_ex
 
 # merge dict and keep values of common keys in list
@@ -1094,9 +1117,47 @@ def check_vars(cat_cs, cat_tu):
 
 #------------------------------------------------------------
 
+# TU catalog in two parts, cut at max(COSMOS["mag"])
+def mag_sup_inf(som, cat_cs, cat_tu):
+    """
+    TU catalog in two parts, cut at max(COSMOS["mag"])
+    """
+    mag_max = np.max(cat_cs["mag"])
+
+    mag_tu_sup_cs = cat_tu['mag'][np.where(cat_tu['mag']>mag_max)[0]]
+    hlr_mag_tu_sup_cs = cat_tu['hlr'][np.where(cat_tu['mag']>mag_max)[0]]
+    cut_mag_sup = np.vstack([mag_tu_sup_cs, hlr_mag_tu_sup_cs]).T
+
+    mag_tu_inf_cs = cat_tu['mag'][np.where(cat_tu['mag']<mag_max)[0]]
+    hlr_mag_tu_inf_cs = cat_tu['hlr'][np.where(cat_tu['mag']<mag_max)[0]]
+    cut_mag_inf = np.vstack([mag_tu_inf_cs, hlr_mag_tu_inf_cs]).T
+
+    activ_inf = som.activation_response(cut_mag_inf)
+    for i in range(50):
+        for j in range(50):
+            if activ_inf[i,j]!=0:
+                activ_inf[i,j] = np.log(activ_inf[i,j])
+            else:
+                activ_inf[i,j] = np.nan
+
+    return cut_mag_sup, activ_inf
+
+#------------------------------------------------------------
+
 # check gx properties near mag 25.2
 
-def _get_loc(som, data, voisins_nb=8, activ_2_val=0):
+def get_loc(som, data, voisins_nb=8, activ_2_val=0):
+    """
+    Return a random localisation of a galaxy near a depopulated area
+
+    Params:
+    - som: MiniSom, trained SOM
+    - data : array, training dataset
+
+    Optinal params:
+    - voisins_nb : int, -4- direct neighbors or -8- neighbors
+    - activ_2_val : int, number of hit of the neighbor (default = 0 to search in depopulated areas)
+    """
     activ_resp = som.activation_response(data)
     som_x, som_y = activ_resp.shape
 
@@ -1128,7 +1189,15 @@ def _get_loc(som, data, voisins_nb=8, activ_2_val=0):
     rng = np.random.default_rng()
     return rng.choice(tab)
 
-def _get_idx(som, cat, loc):
+def get_idx(som, cat, loc):
+    """
+    Return the galaxy index of the get_loc() result
+
+    Params:
+    - som: MiniSom, trained SOM
+    - data : array, training dataset
+    - loc : tuple, get_loc() result -> galaxy position
+    """
     get_idx=[]
     for i,j in enumerate(cat):
         idx = np.argwhere(som.activation_response([j]))[0]
@@ -1136,7 +1205,19 @@ def _get_idx(som, cat, loc):
             get_idx.append(i)
     return get_idx
 
-def _act_show(som, point, data, figsize=(7,7), markersize=30):
+def act_show(som, point, data, figsize=(7,7), markersize=30):
+    """
+    Show the activation map and the position of the galaxy find with get_loc()
+
+    Params
+    - som: MiniSom, trained SOM
+    - point : tuple, get_loc() result -> galaxy position
+    - data : array, training dataset
+
+    Optinal params:
+    - figsize : tuple, size of the figure
+    - markersize : int, size of tht marker of the galaxy
+    """
     from matplotlib.colors import LogNorm
 
     activ_resp = som.activation_response(data)
@@ -1146,7 +1227,14 @@ def _act_show(som, point, data, figsize=(7,7), markersize=30):
     plt.scatter(x=point[1], y=point[0], s=markersize, c='r')
     plt.show()
 
-def _check_hist_pos(dat, cat):
+def check_hist_pos(dat, cat):
+    """
+    Position of the galaxy in the histograms of a catalog
+
+    Params:
+    - dat : list, galaxy parameters
+    - cat : dict, galaxy catalog
+    """
     cat["mag"]*=35
     dat[0]*=35
 
@@ -1158,11 +1246,20 @@ def _check_hist_pos(dat, cat):
         plt.subplot(1,4,i+1)
         plt.title(vars + ' = %.2f' % dat[i])
         plt.axvline(dat[i], color='k')
-        plt.hist(cat[vars], bins=200, density=True)
+        if vars=='hlr':
+            bins=500
+        else:
+            bins=200
+        plt.hist(cat[vars], bins=bins, density=True)
         if vars=="hlr":
             plt.xlim(-.1,1.1)
     plt.tight_layout()
     plt.show()
+
+    cat["mag"]/=35
+    dat[0]/=35
+    cat["sersic"]/=6
+    dat[2]/=6
 
 #point = _get_loc(som_tu2, choice_cs, voisins_nb=8, activ_2_val=0)
 #_act_show(som_tu2, point, choice_cs)
