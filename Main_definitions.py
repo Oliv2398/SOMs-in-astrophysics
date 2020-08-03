@@ -572,7 +572,8 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 #------------------------------------------------------------
 
 # hitmap
-def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hide_ticks=True, figsize='default', fontsize=None, compare=None, hit_count_compare=False, normed_compare=False):
+def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, colorbars=False, figsize='default', fontsize=None,
+           compare=None, hit_count_compare=False, normed_compare=False):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -584,7 +585,7 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hide_
     - topology : str, -rectangular- or -hexagonal-
     - normed : bool, imshow with LogNorm
     - hit_count : bool, number of hit in each cell
-    - hide_ticks : bool, to hide or not x and y ticks of the figure(s)
+    - colorbars : bool, add colorbar to the figure(s) (only on rectangular topology)
     - figsize : tuple, size of the figure
     - fontsize : int, size of the fonts (hit_count must be activated)
     - compare : array, to compare the hitmap with an array (could be a weight or other) of dimension 1
@@ -626,11 +627,18 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hide_
             norm_compare = None
 
         if compare is not None:
-            ax[0].imshow(activ_resp, norm = norm)
-            ax[1].imshow(compare, norm = norm_compare)
+            ax0 = ax[0].imshow(activ_resp, norm = norm)
+            ax1 = ax[1].imshow(compare, norm = norm_compare)
+            if colorbars:
+                ax_cb0 = _colorbars_perso(ax[0])
+                ax_cb1 = _colorbars_perso(ax[1])
+                plt.colorbar(ax0, cax=ax_cb0)
+                plt.colorbar(ax1, cax=ax_cb1)
         else:
-            ax.imshow(activ_resp, norm = norm)
-
+            ax1 = ax.imshow(activ_resp, norm = norm)
+            if colorbars:
+                ax_cb1 = _colorbars_perso(ax)
+                plt.colorbar(ax1, cax=ax_cb1)
 
         if hit_count:
             som_x, som_y = som.get_weights().shape[:2]
@@ -725,19 +733,18 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hide_
             ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
             ax.set_aspect('equal')
 
-    if hide_ticks:
-        if compare is not None:
-            ax[0].set_xticks([])
-            ax[0].set_yticks([])
-            ax[1].set_xticks([])
-            ax[1].set_yticks([])
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
+
+    if compare is not None:
+        ax[0].set_xticks([])
+        ax[0].set_yticks([])
+        ax[1].set_xticks([])
+        ax[1].set_yticks([])
+    else:
+        ax.set_xticks([])
+        ax.set_yticks([])
 
     plt.tight_layout()
     plt.show()
-
 
 def Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
     """
@@ -1181,14 +1188,6 @@ def mag_sup_inf(som, cat_cs, cat_tu):
     mag_tu_inf_cs = cat_tu['mag'][np.where(cat_tu['mag']<mag_max)[0]]
     hlr_mag_tu_inf_cs = cat_tu['hlr'][np.where(cat_tu['mag']<mag_max)[0]]
     cut_mag_inf = np.vstack([mag_tu_inf_cs, hlr_mag_tu_inf_cs]).T
-
-    activ_inf = som.activation_response(cut_mag_inf)
-    for i in range(50):
-        for j in range(50):
-            if activ_inf[i,j]!=0:
-                activ_inf[i,j] = np.log(activ_inf[i,j])
-            else:
-                activ_inf[i,j] = np.nan
 
     return cut_mag_sup, activ_inf
 
