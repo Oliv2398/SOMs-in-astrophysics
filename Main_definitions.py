@@ -11,7 +11,6 @@ from matplotlib.colors import to_hex
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
-from mpl_toolkits import mplot3d
 
 from ipywidgets import (interactive,
     IntSlider, FloatSlider, RadioButtons, fixed, Layout,
@@ -299,32 +298,47 @@ except:
         return dict_vars
 
 def plot_error(dict_vars):
-        """
-        Some plots from the manual training
-        """
-        plt.figure(figsize=(10,4))
-        plt.plot(dict_vars["iter_x"], dict_vars["q_error"])
-        plt.ylabel('quantization error')
-        plt.xlabel('iteration')
+    """
+    Some plots from the manual training
+    """
 
-        if "t_error" in dict_vars:
-            plt.figure(figsize=(10,4))
-            plt.plot(dict_vars["iter_x"], dict_vars["t_error"])
-            plt.ylabel('topological error')
+    if "sigma" in dict_vars:
+        fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(12,10))
+    else:
+        fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(10,10))
 
-        if "sigma" in dict_vars:
-            fig, ax = plt.subplots(1,2,figsize=(10,4))
-            ax[0].plot(dict_vars["iter_x"], dict_vars["sigma"])
-            ax[0].set_ylabel("sigma")
-            ax[1].plot(dict_vars["iter_x"], dict_vars["learning_rate"])
-            ax[1].set_ylabel('learning rate')
 
-        if "mapmean" in dict_vars=
-            plt.figure(figsize=(10,4))
-            plt.plot(dict_vars["iter_x"], dict_vars["mapmean"])
-            plt.ylabel('mean of the distance map')
+    ax[0,0].plot(dict_vars["iter_x"], dict_vars["q_error"])
+    ax[0,0].set_ylabel('quantization error')
 
-        plt.show()
+    if "t_error" in dict_vars:
+        ax[1,0].plot(dict_vars["iter_x"], dict_vars["t_error"])
+        ax[1,0].set_ylabel('topological error')
+
+        ax[2,0].plot(dict_vars["iter_x"], dict_vars["mapmean"])
+        ax[2,0].set_ylabel('moyenne de la distance map')
+        ax[2,0].set_xlabel('iterations')
+    else:
+        ax[1,0].plot(dict_vars["iter_x"], dict_vars["mapmean"])
+        ax[1,0].set_ylabel('moyenne de la distance map')
+        ax[1,0].set_xlabel('iterations')
+
+        ax[2,0].axis('off')
+
+
+    if "sigma" in dict_vars:
+        ax[0,1].plot(dict_vars["iter_x"], dict_vars["sigma"])
+        ax[0,1].set_ylabel("sigma")
+        ax[1,1].plot(dict_vars["iter_x"], dict_vars["learning_rate"])
+        ax[1,1].set_ylabel('learning rate')
+        ax[1,1].set_xlabel('iterations')
+        ax[1,1].set_xticks(np.arange(0, 300, step=50))
+
+        ax[2,1].axis('off')
+
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=.4, hspace=.03)
+    plt.show()
 
 #------------------------------------------------------------
 
@@ -558,7 +572,7 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
 #------------------------------------------------------------
 
 # hitmap
-def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_vars=False, figsize='default', fontsize=None, compare=None):
+def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hide_ticks=True, figsize='default', fontsize=None, compare=None, hit_count_compare=False, normed_compare=False):
     """
     Show the activation response of the SOM to a certain dataset
 
@@ -570,18 +584,13 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_
     - topology : str, -rectangular- or -hexagonal-
     - normed : bool, imshow with LogNorm
     - hit_count : bool, number of hit in each cell
-    - hist_vars : bool, histogram of the dataset's variables
+    - hide_ticks : bool, to hide or not x and y ticks of the figure(s)
     - figsize : tuple, size of the figure
     - fontsize : int, size of the fonts (hit_count must be activated)
     - compare : array, to compare the hitmap with an array (could be a weight or other) of dimension 1
+    - hit_count_compare : bool, number of hit in each cell of the compared dataset (work for activation_response data only)
+    - normed_compare : bool, imshow with LogNorm of the compared dataset
     """
-
-    if hist_vars:
-        fig, ax = plt.subplots(1,data.shape[1], figsize=(17,6))
-        for i, cols in enumerate(data.T):
-            ax[i].hist(cols, bins=100, color="black")
-        plt.show()
-
 
     # activation response
     activ_resp = som.activation_response(data)
@@ -611,9 +620,14 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_
         else:
             norm = None
 
+        if normed_compare:
+            norm_compare = LogNorm()
+        else:
+            norm_compare = None
+
         if compare is not None:
             ax[0].imshow(activ_resp, norm = norm)
-            ax[1].imshow(compare)
+            ax[1].imshow(compare, norm = norm_compare)
         else:
             ax.imshow(activ_resp, norm = norm)
 
@@ -629,6 +643,11 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_
                             ax[0].text(j, i, int(activ_resp[i,j]),
                                     horizontalalignment='center',
                                     verticalalignment='center', fontsize=fontsize)
+                            if hit_count_compare and compare[i,j]!=0:
+                                ax[1].text(j, i, int(compare[i,j]),
+                                        horizontalalignment='center',
+                                        verticalalignment='center', fontsize=fontsize)
+
                         else:
                             ax.text(j, i, int(activ_resp[i,j]),
                                     horizontalalignment='center',
@@ -702,15 +721,23 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, hist_
             ax[1].axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
             ax[0].set_aspect('equal')
             ax[1].set_aspect('equal')
-            ax[0].axis('off')
-            ax[1].axis('off')
         else:
             ax.axis([-1, som_x, -.7, som_y*np.sqrt(3)/2])
             ax.set_aspect('equal')
-            ax.axis('off')
+
+    if hide_ticks:
+        if compare is not None:
+            ax[0].set_xticks([])
+            ax[0].set_yticks([])
+            ax[1].set_xticks([])
+            ax[1].set_yticks([])
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
 
     plt.tight_layout()
     plt.show()
+
 
 def Hitmap2(som, data, compare, normed=True, hit_count=True, fontsize=None):
     """
@@ -856,12 +883,15 @@ def interactive_plot(data, size='default', names=(["R","G","B"]), infos=False):
 #------------------------------------------------------------
 
 # 3D plot of the weights in color
-def weights_3D(weights):
+def weights_3D(weights, weights2=None):
     """
     3D plot of the weights in color.
 
     Params:
     - weights : array, data to plot
+
+    Optional params:
+    - weights2 : array, data to plot
     """
     if weights.ndim in (3,4):
         som_x, som_y, cols = weights.shape
@@ -869,12 +899,32 @@ def weights_3D(weights):
     else:
         wr = weights.copy()
 
-    from mpl_toolkits import mplot3d
+    if weights2 is not None:
+        if weights2.ndim in (3,4):
+            som_x2, som_y2, cols2 = weights2.shape
+            wr2 = weights2.reshape(som_x2 * som_y2, cols2)
+        else:
+            wr2 = weights2.copy()
 
-    fig = plt.figure(figsize = (10, 7))
-    ax = plt.axes(projection ="3d")
-    ax.scatter3D(wr[:,0], wr[:,1], wr[:, 2], c=wr)
-    ax.view_init(30, 20)
+
+    fig = plt.figure(figsize=(18,7))
+
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax1.scatter3D(wr[:,0], wr[:,1], wr[:, 2], c=wr)
+    ax1.set_xlabel('R')
+    ax1.set_ylabel('G')
+    ax1.set_zlabel('B')
+    ax1.view_init(30, 20)
+
+
+    if weights2 is not None:
+        ax2 = fig.add_subplot(122, projection='3d')
+        ax2.scatter3D(wr2[:,0], wr2[:,1], wr2[:, 2], c=wr2)
+        ax2.set_xlabel('R')
+        ax2.set_ylabel('G')
+        ax2.set_zlabel('B')
+        ax2.view_init(30, 20)
+
     plt.show()
 
 # cut extrem values in a dataset
