@@ -567,6 +567,8 @@ def PlotSOMs(som, var_names=(["R","G","B"]), topology='rectangular', rescale_wei
             pass
 
     plt.tight_layout()
+    if colorbars:
+        plt.subplots_adjust(bottom=.25)
     plt.show()
 
 #------------------------------------------------------------
@@ -1254,7 +1256,7 @@ def get_idx(som, cat, loc):
             get_idx.append(i)
     return get_idx
 
-def act_show(som, point, data, figsize=(7,7), markersize=30):
+def act_show(som, point, data):
     """
     Show the activation map and the position of the galaxy find with get_loc()
 
@@ -1262,18 +1264,15 @@ def act_show(som, point, data, figsize=(7,7), markersize=30):
     - som: MiniSom, trained SOM
     - point : tuple, get_loc() result -> galaxy position
     - data : array, training dataset
-
-    Optinal params:
-    - figsize : tuple, size of the figure
-    - markersize : int, size of tht marker of the galaxy
     """
     from matplotlib.colors import LogNorm
 
     activ_resp = som.activation_response(data)
 
-    plt.figure(figsize=figsize)
+    plt.figure(figsize=(9,9))
     plt.imshow(activ_resp, norm=LogNorm())
-    plt.scatter(x=point[1], y=point[0], s=markersize, c='r')
+    plt.scatter(x=point[1], y=point[0], marker='x', s=500, linewidth=7, c='r')
+    plt.xticks([]) ; plt.yticks([])
     plt.show()
 
 def check_hist_pos(dat, cat):
@@ -1310,10 +1309,10 @@ def check_hist_pos(dat, cat):
     cat["sersic"]/=6
     dat[2]/=6
 
-#point = _get_loc(som_tu2, choice_cs, voisins_nb=8, activ_2_val=0)
-#_act_show(som_tu2, point, choice_cs)
+#point = get_loc(som_tu, choice_cs, voisins_nb=8, activ_2_val=0)
+#act_show(som_tu, point, choice_cs)
 
-#idx = _get_idx(som_tu2, choice_cs, point)[0]
-#_check_hist_pos(choice_cs[idx], data_cs_)
+#idx = get_idx(som_tu, choice_cs, point)[0]
+#check_hist_pos(choice_cs[idx], data_cs)
 
 #------------------------------------------------------------
