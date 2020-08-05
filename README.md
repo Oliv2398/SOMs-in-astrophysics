@@ -1,10 +1,30 @@
-# Etude des catalogues COSMOS et True Universe à l'aide des Self Organizing Maps
+# Etude des différences entre les catalogues COSMOS et True Universe à l'aide des Self Organizing Maps
+
+---
+
+Rapport de stage de Master Physique 1 ainsi que tous les codes et données ayant servi à son élaboration.
 
 
 
-Utilisation du package [minisom](https://github.com/JustGlowing/minisom) 
 
 
+## Installation
+
+---
+
+Afin de pouvoir lire et exécuter tout le rapport, il est nécessaire de télécharger le *repository* à l'aide du bouton vert Code &rightarrow;  Download zip et d'avoir Jupyter Notebook installé.
+
+Ensuite il suffit simplement d'ouvrir le rapport avec Jupyter Notebook.
+
+Utilisation du package [minisom](https://github.com/Oliv2398/minisom) modifié
+
+
+
+
+
+## Aperçu des résultats présents dans le rapport
+
+---
 
 Première approche avec un jeu de données de couleurs, random et uniforme :
 
