@@ -11,6 +11,7 @@ from matplotlib.colors import to_hex
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
+from mpl_toolkits.mplot3d import Axes3D
 
 from ipywidgets import (interactive,
     IntSlider, FloatSlider, RadioButtons, fixed, Layout,
@@ -87,7 +88,7 @@ def data_blue(nb=10000, loc_r=.2, loc_g=.2, loc_b=.7, s_r=.04, s_g=.04, s_b=.05)
 
 # training
 def train_som(data, sigma, learning_rate, iterations,
-              topology='rectangular', size='default', verbose=False):
+              topology='rectangular', size='default', random_seed=None):
     """
     Params:
     - data : array, training dataset
@@ -96,9 +97,9 @@ def train_som(data, sigma, learning_rate, iterations,
     - iterations : int, determine the time of the training
 
     Optional params:
-    - verbose : bool, informations along the training
     - topology : str, topology of the map, -rectangular- or -hexagonal-
     - size : tuple, size of the map
+    - random_seed : int, Random seed to use
 
     Return :
     - som : MiniSom, trained SOM
@@ -120,11 +121,12 @@ def train_som(data, sigma, learning_rate, iterations,
                   input_len = cols,
                   sigma = sigma,
                   learning_rate = learning_rate,
-                  topology = topology)
+                  topology = topology,
+                  random_seed = random_seed)
 
     som.random_weights_init(data)
 
-    som.train_random(data, iterations, verbose=verbose)
+    som.train_random(data, iterations)
 
     weights = som.get_weights()
 
@@ -133,169 +135,95 @@ def train_som(data, sigma, learning_rate, iterations,
 #------------------------------------------------------------
 
 # manual training
-try :
-    from som_package.minisom_perso.minisom_perso import MiniSom_perso
+def train_and_get_error(data, sigma, learning_rate, iterations,
+    frequence, topological_error=False, animated=True, sig_view=True):
+    """
+    Training with a modified MiniSom to get the sigma and learning rate through the process
 
-    def train_and_get_error(data, sigma, learning_rate, iterations,
-        frequence, topological_error=False, animated=True, sig_view=True):
-        """
-        Training with a modified MiniSom to get the sigma and learning rate through the process
+    Params:
+    - data : array, training dataset
+    - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
+    - learning rate : float, determines the step size at each iteration
+    - iterations : int, determine the time of the training
+    - frequence : int, learning interval for errors
 
-        Params:
-        - data : array, training dataset
-        - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
-        - learning rate : float, determines the step size at each iteration
-        - iterations : int, determine the time of the training
-        - frequence : int, learning interval for errors
+    Optional params:
+    - topological_error : bool, whether the topological error is to be learned or not
+    - animated : bool, show the SOM on live during the training
+    - sig_view : bool, show the sigma on live during the training
 
-        Optional params:
-        - topological_error : bool, whether the topological error is to be learned or not
-        - animated : bool, show the SOM on live during the training
-        - sig_view : bool, show the sigma on live during the training
+    Return :
+    - dict_vars : dict,
+        iterations,
+        quantization error for the training dataset,
+        topological error if -topological_error- is activated,
+        mean of the distance map (U-matrix),
+        sigma,
+        learning rate
+    """
+    rows, cols = data.shape
+    som_x = int(np.sqrt(5*np.sqrt(rows)))
+    som_y = som_x
 
-        Return :
-        - dict_vars : dict,
-            iterations,
-            quantization error for the training dataset,
-            topological error if -topological_error- is activated,
-            mean of the distance map (U-matrix),
-            sigma,
-            learning rate
-        """
-        rows, cols = data.shape
-        som_x = int(np.sqrt(5*np.sqrt(rows)))
-        som_y = som_x
+    som = MiniSom(som_x, som_y, cols, sigma, learning_rate)
+    som.random_weights_init(data)
 
-        som = MiniSom_perso(som_x, som_y, cols, sigma, learning_rate)
-        som.random_weights_init(data)
+    dict_vars ={"iter_x":[],
+                "q_error":[],
+                "mapmean":[],
+                "sigma":[],
+                "learning_rate":[]}
 
-        dict_vars ={"iter_x":[],
-                    "q_error":[],
-                    "mapmean":[],
-                    "sigma":[],
-                    "learning_rate":[]}
+    if topological_error:
+        dict_vars["t_error"]=[]
 
-        if topological_error:
-            dict_vars["t_error"]=[]
+    if animated:
+        from IPython.display import clear_output
 
-        if animated:
-            from IPython.display import clear_output
+    for i in range(iterations):
+        rand_i = np.random.randint(len(data)) # This corresponds to train_random() method.
 
-        for i in range(iterations):
-            rand_i = np.random.randint(len(data)) # This corresponds to train_random() method.
+        ####
+        # modification here, original -som.update()- doesn't return anything
+        sigma_i, learning_rate_i = som.update_perso(data[rand_i], som.winner(data[rand_i]), i, iterations)
+        ####
 
-            ####
-            # modification here, original -som.update()- doesn't return anything
-            sigma_i, learning_rate_i = som.update_perso(data[rand_i], som.winner(data[rand_i]), i, iterations)
-            ####
+        if (i+1) % frequence == 0:
+            q_error = som.quantization_error(data)
+            dict_vars["q_error"].append(q_error)
 
-            if (i+1) % frequence == 0:
-                q_error = som.quantization_error(data)
-                dict_vars["q_error"].append(q_error)
+            if topological_error:
+                t_error = som.topographic_error(data)
+                dict_vars["t_error"].append(t_error)
 
-                if topological_error:
-                    t_error = som.topographic_error(data)
-                    dict_vars["t_error"].append(t_error)
+            dict_vars["iter_x"].append(i)
+            dict_vars["mapmean"].append(np.mean(som.distance_map_perso()))
+            dict_vars["sigma"].append(sigma_i)
+            dict_vars["learning_rate"].append(learning_rate_i)
 
-                dict_vars["iter_x"].append(i)
-                dict_vars["mapmean"].append(np.mean(som.distance_map_perso()))
-                dict_vars["sigma"].append(sigma_i)
-                dict_vars["learning_rate"].append(learning_rate_i)
+            if not animated:
+                print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
 
-                if not animated:
-                    print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
+            if animated: # imshow weights and distance map during the training
+                fig, ax = plt.subplots(1, 2, figsize=(14,7))
 
-                if animated: # imshow weights and distance map during the training
-                    fig, ax = plt.subplots(1, 2, figsize=(14,7))
+                ax[0].imshow(som.get_weights())
+                ax[0].set_title('sigma %.2f' % sigma_i)
+                ax[0].axis('off')
+                ax[1].imshow(som.distance_map())
+                ax[1].set_title('distance map')
+                ax[1].axis('off')
 
-                    ax[0].imshow(som.get_weights())
-                    ax[0].set_title('sigma %.2f' % sigma_i)
-                    ax[0].axis('off')
-                    ax[1].imshow(som.distance_map())
-                    ax[1].set_title('distance map')
-                    ax[1].axis('off')
+                if sig_view:
+                    win = som.winner(data[rand_i])
+                    circle = plt.Circle(xy = win[::-1], radius = sigma_i, edgecolor='k', fill=False)
+                    ax[0].add_artist(circle)
 
-                    if sig_view:
-                        win = som.winner(data[rand_i])
-                        circle = plt.Circle(xy = win[::-1], radius = sigma_i, edgecolor='k', fill=False)
-                        ax[0].add_artist(circle)
+                plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
+                plt.show()
+                clear_output(wait=True)
 
-                    plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
-                    plt.show()
-                    clear_output(wait=True)
-
-        return dict_vars
-
-except:
-    def train_and_get_error(data, sigma, learning_rate, iterations,
-        frequence, topological_error=False, animated=True, sig_view=True):
-        """
-        Manual training to see the evolution all along.
-
-        Params:
-        - data : array, training dataset
-        - sigma : float, spread of the neighborhood function, needs to be adequate to the dimensions of the map.
-        - learning rate : float, determines the step size at each iteration
-        - iterations : int, determine the time of the training
-        - frequence : int, learning interval for errors
-
-        Optional params:
-        - topological_error : bool, whether the topological error is to be learned or not
-        - animated : bool, show the SOM on live during the training
-
-        Return :
-        - dict_vars : dict,
-            iterations,
-            quantization error for the training dataset,
-            topological error if -topological_error- is activated
-        """
-        rows, cols = data.shape
-        som_x = int(np.sqrt(5*np.sqrt(rows)))
-        som_y = som_x
-
-        som = MiniSom(som_x, som_y, cols, sigma, learning_rate)
-        som.random_weights_init(data)
-
-        dict_vars ={"iter_x":[],
-                    "q_error":[]}
-
-        if topological_error:
-            dict_vars["t_error"]=[]
-
-        if animated:
-            from IPython.display import clear_output
-
-        for i in range(iterations):
-            rand_i = np.random.randint(len(data)) # This corresponds to train_random() method.
-
-            som.update(data[rand_i], som.winner(data[rand_i]), i, iterations)
-
-            if (i+1) % frequence == 0:
-                dict_vars["iter_x"].append(i)
-                q_error = som.quantization_error(data)
-                dict_vars["q_error"].append(q_error)
-
-                if topological_error:
-                    t_error = som.topographic_error(data)
-                    dict_vars["t_error"].append(t_error)
-
-                if not animated:
-                    print('\r [ %d / %d ] ; %d %%'%(i+1, iterations, 100*(i+1)/iterations), end='')
-
-                if animated: # imshow weights and distance map during the training
-                    fig, ax = plt.subplots(1, 2, figsize=(14,7))
-
-                    ax[0].imshow(som.get_weights())
-                    ax[0].axis('off')
-                    ax[1].imshow(som.distance_map())
-                    ax[1].set_title('distance map')
-                    ax[1].axis('off')
-
-                    plt.suptitle('SOM %d x %d ; iteration [ %d / %d ] - %d %%'%(som_x, som_y, i+1, iterations, 100*(i+1)/iterations))
-                    plt.show()
-                    clear_output(wait=True)
-
-        return dict_vars
+    return dict_vars
 
 def plot_error(dict_vars):
     """
@@ -902,6 +830,8 @@ def weights_3D(weights, weights2=None):
     Optional params:
     - weights2 : array, data to plot
     """
+    from mpl_toolkits.mplot3d import Axes3D
+
     if weights.ndim in (3,4):
         som_x, som_y, cols = weights.shape
         wr = weights.reshape(som_x * som_y, cols)
@@ -1190,6 +1120,8 @@ def mag_sup_inf(som, cat_cs, cat_tu):
     mag_tu_inf_cs = cat_tu['mag'][np.where(cat_tu['mag']<mag_max)[0]]
     hlr_mag_tu_inf_cs = cat_tu['hlr'][np.where(cat_tu['mag']<mag_max)[0]]
     cut_mag_inf = np.vstack([mag_tu_inf_cs, hlr_mag_tu_inf_cs]).T
+
+    activ_inf = som.activation_response(cut_mag_inf)
 
     return cut_mag_sup, activ_inf
 
