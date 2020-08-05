@@ -10,7 +10,7 @@ Rapport de stage de Master Physique 1 ainsi que tous les codes et données ayant
 
 ## Installation
 
-Afin de pouvoir lire et exécuter tout le rapport, il est nécessaire de télécharger le *repository* à l'aide du bouton vert Code &rightarrow;  Download zip et d'avoir Jupyter Notebook installé.
+Afin de pouvoir lire et exécuter tout le rapport, il est nécessaire de télécharger le *repository* à l'aide du bouton vert Code &rightarrow;  Download zip et d'avoir Jupyter Notebook et git installés.
 
 Ensuite il suffit simplement d'ouvrir le rapport avec Jupyter Notebook.
 
