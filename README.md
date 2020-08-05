@@ -14,8 +14,6 @@ Afin de pouvoir lire et exécuter tout le rapport, il est nécessaire de téléc
 
 Ensuite il suffit simplement d'ouvrir le rapport avec Jupyter Notebook.
 
-Utilisation du package [minisom](https://github.com/Oliv2398/minisom) modifié
-
 
 
 &nbsp;
