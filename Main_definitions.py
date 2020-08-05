@@ -99,7 +99,7 @@ def train_som(data, sigma, learning_rate, iterations,
     Optional params:
     - topology : str, topology of the map, -rectangular- or -hexagonal-
     - size : tuple, size of the map
-    - random_seed : int, Random seed to use
+    - random_seed : int, random seed to use
 
     Return :
     - som : MiniSom, trained SOM
