@@ -22,8 +22,6 @@ Utilisation du package [minisom](https://github.com/Oliv2398/minisom) modifié
 
 ## Aperçu des résultats présents dans le rapport
 
----
-
 Première approche avec un jeu de données de couleurs, random et uniforme :
 
 SOM, distance map, ainsi que les poids de chaque couleur, pour un topologie rectangulaire :
