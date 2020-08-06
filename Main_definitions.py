@@ -244,11 +244,11 @@ def plot_error(dict_vars):
         ax[1,0].set_ylabel('topological error')
 
         ax[2,0].plot(dict_vars["iter_x"], dict_vars["mapmean"])
-        ax[2,0].set_ylabel('moyenne de la distance map')
+        ax[2,0].set_ylabel('mean of the distance map')
         ax[2,0].set_xlabel('iterations')
     else:
         ax[1,0].plot(dict_vars["iter_x"], dict_vars["mapmean"])
-        ax[1,0].set_ylabel('moyenne de la distance map')
+        ax[1,0].set_ylabel('mean of the distance map')
         ax[1,0].set_xlabel('iterations')
 
         ax[2,0].axis('off')
