@@ -1,0 +1,8 @@
+autopep8
+numpy
+matplotlib
+scikit-learn
+ipywidgets
+jupyterlab
+astropy
+git+https://github.com/Oliv2398/minisom.git#egg=minisom
