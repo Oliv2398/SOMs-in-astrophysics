@@ -1192,7 +1192,7 @@ def get_idx(som, cat, loc):
             get_idx.append(i)
     return get_idx
 
-def act_show(som, point, data):
+def act_show(som, point, data, compare=None, rescale_compare=True):
     """
     Show the activation map and the position of the galaxy find with get_loc()
 
@@ -1200,15 +1200,37 @@ def act_show(som, point, data):
     - som: MiniSom, trained SOM
     - point : tuple, get_loc() result -> galaxy position
     - data : array, training dataset
+
+    Optional params:
+    - compare : array, data to compare
+    - rescale_compare : bool, in case "compare" is uninterpretable (typically SOM with 4 params : mag, hlr...)
     """
     from matplotlib.colors import LogNorm
 
     activ_resp = som.activation_response(data)
 
-    plt.figure(figsize=(9,9))
-    plt.imshow(activ_resp, norm=LogNorm())
-    plt.scatter(x=point[1], y=point[0], marker='x', s=500, linewidth=7, c='r')
-    plt.xticks([]) ; plt.yticks([])
+    if compare is not None:
+        fig, ax = plt.subplots(1,2, figsize=(14,6))
+        ax[0].imshow(activ_resp, norm=LogNorm())
+        ax[0].scatter(x=point[1], y=point[0], marker='x', s=500, linewidth=7, c='r')
+        ax[0].set_xticks([]) ; ax[0].set_yticks([])
+
+        if rescale_compare:
+            rescale = compare.copy()
+            for i in range(compare.shape[-1]):
+                rescale[:,:,i] = (rescale[:,:,i] - np.min(rescale[:,:,i]))/(np.max(rescale[:,:,i])-np.min(rescale[:,:,i]))
+            if rescale.shape[-1]==4:
+                rescale[:,:,-1] = rescale[:,:,-1]*0+1
+            ax[1].imshow(rescale)
+        else:
+            ax[1].imshow(compare)
+        ax[1].set_xticks([]) ; ax[1].set_yticks([])
+
+    else:
+        plt.figure(figsize=(9,9))
+        plt.imshow(activ_resp, norm=LogNorm())
+        plt.scatter(x=point[1], y=point[0], marker='x', s=500, linewidth=7, c='r')
+        plt.xticks([]) ; plt.yticks([])
     plt.show()
 
 def check_hist_pos(dat, cat):
