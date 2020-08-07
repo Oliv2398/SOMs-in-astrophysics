@@ -10,9 +10,22 @@ Rapport de stage de Master Physique 1 ainsi que tous les codes et données ayant
 
 ## Installation
 
-Afin de pouvoir lire et exécuter tout le rapport, il est nécessaire de télécharger le *repository* à l'aide du bouton vert Code &rightarrow;  Download zip et d'avoir Jupyter Notebook et git installés.
+Afin de pouvoir lire et exécuter le rapport, suivre les indications suivantes : 
 
-Ensuite il suffit simplement d'ouvrir le rapport avec Jupyter Notebook.
+```python
+git clone https://github.com/Oliv2398/SOMs-in-astrophysics
+cd SOMs-in-astrophysics
+
+ # Création de l'environnement virtuel et installation des dépendances (à faire une seule fois)
+python -m venv venv 
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Activation de l'environnement virtuel (il doit apparaitre à gauche du prompt)
+source venv/bin/activate
+# Lancement du notebook
+jupyter notebook rapport_notebook.ipynb
+```
 
 
 
