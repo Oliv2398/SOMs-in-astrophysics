@@ -22,11 +22,6 @@ from IPython.display import clear_output
 from astropy.io import fits
 
 from sklearn.preprocessing import MinMaxScaler
-
-
-# Special:
-
-from som_package.minisom_perso.minisom_perso import MiniSom_perso
 """
 
 #------------------------------------------------------------
@@ -558,7 +553,16 @@ def Hitmap(som, data, topology="rectangular", normed=True, hit_count=True, color
 
         if compare is not None:
             ax0 = ax[0].imshow(activ_resp, norm = norm)
-            ax1 = ax[1].imshow(compare, norm = norm_compare)
+
+            if compare.shape[-1]==2:
+                cube = np.zeros((compare.shape[0],compare.shape[1],3))
+                for i in range(2):
+                    cube[:,:,i] = compare[:,:,i]
+                    cube[:,:,i] = (cube[:,:,i] - np.min(cube[:,:,i]))/(np.max(cube[:,:,i])-np.min(cube[:,:,i]))
+                ax1 = ax[1].imshow(cube)
+            else:
+                ax1 = ax[1].imshow(compare, norm = norm_compare)
+
             if colorbars:
                 ax_cb0 = _colorbars_perso(ax[0])
                 ax_cb1 = _colorbars_perso(ax[1])
